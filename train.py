@@ -1,0 +1,447 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Jun 17 13:21:14 2020
+
+@author: Michi
+"""
+import argparse
+import os
+import numpy as np
+import tensorflow.compat.v2 as tf
+import tensorflow_probability as tfp
+tf.enable_v2_behavior()
+tfd = tfp.distributions
+from data_generator import create_generators
+from models import *
+#from flags import FLAGS
+from utils import DummyHist, plot_hist, str2bool, Logger, Unbuffered, get_flags
+import sys
+import time
+
+
+
+@tf.function
+def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=False, n_train_example=60000):
+    with tf.GradientTape() as tape:
+        tape.watch(model.trainable_variables) 
+        logits = model(x, training=True)
+        if bayesian:
+             kl = sum(model.losses)/n_train_example
+             loss_value = loss(y, logits, kl)
+        else:
+            loss_value = loss(y, logits)
+        #loss_value += sum(model.losses)
+    grads = tape.gradient(loss_value, model.trainable_weights)
+    optimizer.apply_gradients(zip(grads, model.trainable_weights))
+    proba = tf.nn.softmax(logits)
+    prediction = tf.argmax(proba, axis=1)
+    train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
+    return loss_value
+
+@tf.function
+def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10000):
+    val_logits = model(x, training=False)
+    if bayesian:
+       val_kl = sum(model.losses)/n_val_example
+       val_loss_value = loss(y, val_logits, val_kl)
+    else:
+         val_loss_value = loss(y, val_logits)
+    val_proba = tf.nn.softmax(val_logits)
+    val_prediction = tf.argmax(val_proba, axis=1)
+    val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
+    return val_loss_value
+
+
+@tf.function
+def my_loss(y, logits):
+    loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
+    return loss_f(y, logits) #tf.reduce_mean(loss_f(y, logits))
+
+
+@tf.function
+def ELBO(y, logits, kl):
+    #loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True) 
+    neg_log_likelihood = my_loss(y, logits) #loss_f(y, logits)   
+    #loss = 
+    return neg_log_likelihood + kl
+
+
+
+def my_train(model, optimizer, loss,
+             epochs, 
+             train_generator, 
+             val_generator, manager, ckpt,            
+             train_acc_metric, val_acc_metric,
+             restore=False, patience=100,
+             bayesian=False, save_ckpt=False
+              ):
+  fname_hist = manager.directory+'/hist'
+  if not restore:
+      history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy':[] }
+      best_loss=np.infty
+      print("Initializing checkpoint from scratch.")
+  else:
+      ckpt.restore(manager.latest_checkpoint)
+      print('ckpt step: %s' %ckpt.step)
+      hist_start=int(ckpt.step)
+      print('Starting from history at step %s' %hist_start)
+      history = {'loss': np.loadtxt(fname_hist+'_loss.txt').tolist()[0:hist_start], 
+                 'val_loss': np.loadtxt(fname_hist+'_val_loss.txt').tolist()[0:hist_start], 
+                 'accuracy': np.loadtxt(fname_hist+'_accuracy.txt').tolist()[0:hist_start], 
+                 'val_accuracy':np.loadtxt(fname_hist+'_val_accuracy.txt').tolist()[0:hist_start] }
+      print(history)
+      if manager.latest_checkpoint:
+          print("Restoring checkpoint from {}".format(manager.latest_checkpoint))
+          
+          best_loss = history['val_loss'][-1]
+          print('Starting from best loss %.4f' %(best_loss))
+      else:
+          print("Checkpoint not found. Initializing checkpoint from scratch.")
+  
+  n_val_example=val_generator.batch_size*val_generator.n_batches
+  n_train_example=train_generator.batch_size*train_generator.n_batches
+  count = 0
+  for epoch in range(epochs):
+    print("Epoch %d" % (epoch,))
+    start_time = time.time()
+
+    # Run train loop
+    
+    for batch_idx, batch in enumerate(train_generator):
+        x_batch_train, y_batch_train = batch #train_generator[batch_idx]
+        loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example)
+        #if bayesian:
+        #    loss_value = loss_value /x_batch_train.shape[0]/ float(train_generator.n_batches)
+
+    
+    # Run  validation loop
+    val_loss_value = 0.
+    for val_batch_idx, val_batch in enumerate(val_generator):      
+        x_batch_val, y_batch_val = val_batch #val_generator[val_batch_idx]
+        lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example)/ float(val_generator.n_batches)
+        val_loss_value += lv
+        
+        #if bayesian:
+        #    val_loss_value = val_loss_value/x_batch_val.shape[0]/float(val_generator.n_batches)
+    
+    
+    if val_loss_value.numpy()<best_loss: #int(ckpt.step) % 10 == 0:
+        if save_ckpt:
+            save_path = manager.save()
+            print("Validation loss decreased. Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
+        else:
+            #print('Creating directory %s' %manager.directory)
+            tf.io.gfile.makedirs(manager.directory)
+
+        best_loss = val_loss_value.numpy()      
+        #print("New loss {:1.2f}".format(best_loss))
+        count = 0
+    else:
+        count +=1
+        print('Loss did not decrease. Count = %s' %count)
+        if count==patience:
+            print('Max patience reached. ')
+            break
+    ckpt.step.assign_add(1)
+
+    train_acc = train_acc_metric.result().numpy()
+    train_loss = loss_value.numpy()
+    history['loss'].append(train_loss)
+    history['accuracy'].append(train_acc)
+    train_acc_metric.reset_states()
+
+    val_acc = val_acc_metric.result().numpy()
+    val_loss = val_loss_value.numpy()
+    history['val_loss'].append(val_loss)
+    history['val_accuracy'].append(val_acc)
+    val_acc_metric.reset_states()
+    
+    #print(manager.directory)
+    #+str(epoch)
+    #with open(fname_hist, 'w') as fp:
+    for key in history.keys():
+        fname = fname_hist+'_'+key+'.txt'
+        with open(fname, 'a') as fh:
+            fh.write(str(history[key][-1])+'\n')           
+        #if epoch>0:
+        #    os.remove(manager.directory+'/hist_'+str(epoch-1)+'_'+key+'.txt')
+        #np.savetxt(fname_hist+'_'+key+'.txt', history[key])
+    
+    #epoch_bar.set_postfix(train_loss=loss_value.numpy(), val_loss=val_loss_value.numpy(), 
+    #                      train_accuracy = train_acc.numpy(), val_accuracy=val_acc.numpy())
+    #print("Time taken: %.2fs" % (time.time() - start_time))
+    print("Time:  %.2fs, ---- Loss: %.4f, Acc.: %.4f, Val. Loss: %.4f, Val. Acc.: %.4f\n" % (time.time() - start_time, train_loss, train_acc, val_loss, val_acc))
+
+  return model, history
+
+
+def compute_loss(generator, model, bayesian=False):
+    x_batch_train, y_batch_train = generator[0]
+    logits = model(x_batch_train, training=False)
+    if bayesian:
+            kl = sum(model.losses)/generator.batch_size/generator.n_batches
+            loss_0 = ELBO(y_batch_train, logits, kl)
+    else:
+            loss_0 = my_loss(y_batch_train, logits)
+    return loss_0
+
+
+def main():
+    
+    in_time=time.time()
+        
+    ## Read params from stdin
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument("--bayesian", default=False, type=str2bool, required=False)
+    
+    parser.add_argument("--test_mode", default=True, type=str2bool, required=False)
+    parser.add_argument("--n_test_idx", default=2, type=int, required=False)
+    parser.add_argument("--seed", default=1312, type=int, required=False)
+    
+    parser.add_argument("--fine_tune", default=False, type=str2bool, required=False)
+    parser.add_argument("--log_path", default='', type=str, required=False)
+    
+    parser.add_argument("--restore", default=False, type=str2bool, required=False)
+
+    
+    # FNAMES ETC
+    parser.add_argument("--fname", default='my_net', type=str, required=False)
+    parser.add_argument("--model_name", default='AlexNet', type=str, required=False)
+    parser.add_argument("--my_path", default='/content/drive/My Drive/ML_REACT/', type=str, required=False)
+    parser.add_argument("--DIR", default='data/train_data/train_data_corrected', type=str, required=False)
+    parser.add_argument("--TEST_DIR", default='data/test_data/new_test_data', type=str, required=False)  
+    parser.add_argument("--models_dir", default='models/MM/', type=str, required=False)
+    parser.add_argument("--save_ckpt", default=True, type=str2bool, required=False)
+    
+    
+    # INPUT DATA DIMENSION
+    parser.add_argument("--im_depth", default=500, type=int, required=False)
+    parser.add_argument("--im_width", default=1, type=int, required=False)
+    parser.add_argument("--im_channels", default=4, type=int, required=False)
+    parser.add_argument("--swap_axes", default=True, type=str2bool, required=False)
+    
+    
+    
+    # PARAMETERS TO GENERATE DATA
+    parser.add_argument("--sort_labels", default=True, type=str2bool, required=False)
+    
+    parser.add_argument("--normalization", default='stdcosmo', type=str, required=False)
+    parser.add_argument("--sample_pace", default=4, type=int, required=False)
+    
+    parser.add_argument("--k_max", default=None, type=float, required=False)
+    parser.add_argument("--i_max", default=None, type=int, required=False)
+    
+    parser.add_argument("--add_noise", default=True, type=str2bool, required=False)
+    parser.add_argument("--n_noisy_samples", default=10, type=int, required=False)
+    parser.add_argument("--add_shot", default=True, type=str2bool, required=False)
+    parser.add_argument("--add_sys", default=True, type=str2bool, required=False)
+    parser.add_argument("--sigma_sys", default=2.5, type=float, required=False)
+    
+    parser.add_argument('--z_bins', nargs='+', default=[0,1,2,3], required=False)
+
+    
+    
+    # NET STRUCTURE
+    parser.add_argument("--k1", default=8, type=int, required=False)
+    parser.add_argument("--k2", default=16, type=int, required=False)
+    parser.add_argument("--k3", default=32, type=int, required=False)
+    parser.add_argument("--n_dense", default=0, type=int, required=False)
+    parser.add_argument("--n_conv", default=3, type=int, required=False)
+    
+    
+    # PARAMETERS FOR TRAINING
+    parser.add_argument("--lr", default=2e-05, type=float, required=False)
+    parser.add_argument("--drop", default=0.5, type=float, required=False)
+    parser.add_argument("--n_epochs", default=10, type=int, required=False)
+    parser.add_argument("--val_size", default=0.15, type=float, required=False)
+    parser.add_argument("--test_size", default=0., type=float, required=False)
+    parser.add_argument("--batch_size", default=1050, type=int, required=False)
+    parser.add_argument("--patience", default=10, type=int, required=False)
+    parser.add_argument("--GPU", default=False, type=str2bool, required=False)
+    parser.add_argument("--decay", default=None, type=float, required=False)
+    
+    
+
+    FLAGS = parser.parse_args()
+    
+    FLAGS.z_bins = [int(z) for z in FLAGS.z_bins]
+    
+    if FLAGS.fine_tune:
+        FLAGS_ORIGINAL = get_flags(FLAGS.log_path)
+        FLAGS.c_0 = ['lcdm',]
+        FLAGS.c_1 = ['fR', 'dgp', 'wcdm', 'rand']
+        FLAGS.fine_tune_dict = {'lcdm': 'lcdm', 'fR':'non_lcdm', 'dgp': 'non_lcdm', 'wcdm':'non_lcdm', 'rand':'non_lcdm' }
+        out_path = FLAGS_ORIGINAL.models_dir+FLAGS_ORIGINAL.fname
+        
+    else:
+        out_path = FLAGS.models_dir+FLAGS.fname
+      
+    if FLAGS.test_mode:
+        out_path=out_path+'_test'
+        
+    #if not os.path.exists(out_path):
+    #    print('Creating directory %s' %out_path)
+    #    tf.io.gfile.makedirs(out_path)
+    #else:
+    #   print('Directory %s not created' %out_path)
+    
+    #with open(out_path+'/params.txt', 'w') as fpar:    
+    #    print('Opened params file %s. Writing params' %(out_path+'/params.txt'))
+    print('\n -------- Parameters:')
+    for key,value in vars(FLAGS).items():
+            print (key,value)
+        #    fpar.write(' : '.join([str(key), str(value)])+'\n')
+    
+    #logfile = out_path+'/logfile.txt'
+    #myLog = Logger(logfile)
+    #sys.stdout = myLog
+
+    #ff = open(logfile, 'w')
+    #sys.stdout = ff
+    #sys.stdout=Unbuffered(sys.stdout, ff)
+    
+    
+    
+    print('------------ CREATING DATA GENERATORS ------------\n')
+    training_generator, validation_generator = create_generators(FLAGS)
+    
+    if FLAGS.fine_tune:
+        or_training_generator, or_validation_generator = create_generators(FLAGS_ORIGINAL)
+        n_classes = or_training_generator.n_classes # in order to build correctly original model
+        model_name = FLAGS_ORIGINAL.model_name
+        bayesian=FLAGS_ORIGINAL.bayesian
+    else:
+        n_classes = training_generator.n_classes
+        model_name = FLAGS.model_name
+        bayesian = FLAGS.bayesian
+    
+    print('------------ DONE ------------\n')
+    
+    
+    
+    print('------------ BUILDING MODEL ------------\n')
+    if FLAGS.swap_axes:
+        input_shape = ( int(training_generator.dim[0]), 
+                   int(training_generator.n_channels))
+    else:
+        input_shape = ( int(training_generator.dim[0]), 
+                   int(training_generator.dim[1]), 
+                   int(training_generator.n_channels))
+    print('Input shape %s' %str(input_shape))
+    
+    if FLAGS.test_mode:
+        drop=0
+    else:
+        drop=FLAGS.drop
+    if FLAGS.fine_tune:
+        k_1, k_2, k_3, n_dense, n_conv  = FLAGS_ORIGINAL.k1, FLAGS_ORIGINAL.k2, FLAGS_ORIGINAL.k3, FLAGS_ORIGINAL.n_dense, FLAGS_ORIGINAL.n_conv
+    else:
+        k_1, k_2, k_3, n_dense, n_conv  = FLAGS.k1, FLAGS.k2, FLAGS.k3, FLAGS.n_dense, FLAGS.n_conv
+    
+    model=make_model(model_name = model_name, bayesian=bayesian,
+                     drop=drop, n_labels=n_classes, 
+                     input_shape=input_shape,
+                     k_1 = k_1,k_2=k_2, k_3=k_3,
+                     n_dense=n_dense, n_conv=n_conv, swap_axes=FLAGS.swap_axes
+                     )
+    
+    
+    model.build(input_shape=input_shape)
+    print(model.summary())
+    
+    if FLAGS.fine_tune:
+        loss_0 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian)
+        print('Loss before loading weights/ %s\n' %loss_0.numpy())
+    
+    if FLAGS.decay is not None:
+        lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_generator), FLAGS.decay)
+        optimizer = tf.keras.optimizers.Adam(lr_fn)
+    else:
+        optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
+    
+        
+    ckpts_path = out_path+'/tf_ckpts/'
+    ckpt_name = 'ckpt'
+    ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model) 
+    
+    if FLAGS.fine_tune:
+        print('Loading ckpt from %s' %ckpts_path)
+        latest = tf.train.latest_checkpoint(ckpts_path)
+        print('Loading ckpt %s' %latest)
+        ckpts_path = out_path+'/tf_ckpts_fine_tuning/'
+        ckpt_name = ckpt_name+'_fine_tuning'
+        ckpt.restore(latest)
+        ckpt.optimizer.learning_rate = FLAGS.lr
+        
+        loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian)
+        print('Loss after loading weights/ %s\n' %loss_1.numpy())
+        if not FLAGS.swap_axes:
+            dense_dim=4*4*k_2
+        else:
+            if FLAGS.n_conv==3:
+                dense_dim=k_3
+            elif FLAGS.n_conv==5:
+                dense_dim=k_2
+                
+        model = make_fine_tuning_model(base_model=model, n_out_labels=training_generator.n_classes,
+                                       dense_dim= dense_dim, bayesian=bayesian, trainable=True )
+        model.build(input_shape=input_shape)
+        print(model.summary())
+    
+        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)     
+    
+    manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
+                                         max_to_keep=2, 
+                                         checkpoint_name=ckpt_name)
+    
+    
+    train_acc_metric = tf.keras.metrics.Accuracy()
+    val_acc_metric = tf.keras.metrics.Accuracy()
+    
+    
+    if FLAGS.GPU:
+        device_name = tf.test.gpu_device_name()
+        if device_name != '/device:GPU:0':
+            #raise SystemError('GPU device not found')
+            print('GPU device not found ! Device: %s' %device_name)
+        else: print('Found GPU at: {}'.format(device_name))
+    
+    
+    print('------------ TRAINING ------------\n')
+    if FLAGS.bayesian:
+        loss=ELBO
+    else:
+        loss=my_loss
+        
+    #print('Model n_classes : %s ' %n_classes)
+    print('Features shape: %s' %str(training_generator[0][0].shape))
+    print('Labels shape: %s' %str(training_generator[0][1].shape))   
+    model, history = my_train(model, optimizer, loss,
+             FLAGS.n_epochs, 
+             training_generator, 
+             validation_generator, manager, ckpt,
+             train_acc_metric, val_acc_metric,
+             patience=FLAGS.patience, restore=FLAGS.restore, 
+             bayesian=bayesian, save_ckpt=FLAGS.save_ckpt #not(FLAGS.test_mode)
+)
+    hist_path =  out_path+'/hist.png'
+    if FLAGS.fine_tune:
+        hist_path = out_path +'/hist_fine_tuning.png'  
+    
+    plot_hist(DummyHist(history), epochs=len(history['loss']), save=True, path=hist_path, show=False)
+    
+    
+    #ff.close()
+    #sys.stdout = sys.__stdout__
+    #myLog.close()
+    
+    print('Done in %.2fs' %(time.time() - in_time))
+        
+        
+if __name__=='__main__':
+    
+    main()
+    
+    
