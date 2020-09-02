@@ -244,11 +244,18 @@ def main():
     
     
     # NET STRUCTURE
-    parser.add_argument("--k1", default=8, type=int, required=False)
-    parser.add_argument("--k2", default=16, type=int, required=False)
-    parser.add_argument("--k3", default=32, type=int, required=False)
+    #parser.add_argument("--k1", default=8, type=int, required=False)
+    #parser.add_argument("--k2", default=16, type=int, required=False)
+    #parser.add_argument("--k3", default=32, type=int, required=False)
     parser.add_argument("--n_dense", default=0, type=int, required=False)
-    parser.add_argument("--n_conv", default=3, type=int, required=False)
+    #parser.add_argument("--n_conv", default=3, type=int, required=False)
+    parser.add_argument("--filters", nargs='+', default=[8,16,32], required=False)
+    parser.add_argument("--kernel_sizes", nargs='+', default=[10,5,2], required=False)
+    parser.add_argument("--strides", nargs='+', default=[2,2,1], required=False)
+    parser.add_argument("--pool_sizes", nargs='+', default=[2,2,1], required=False)
+    parser.add_argument("--strides_pooling", nargs='+', default=[2,1,1], required=False)
+    
+    parser.add_argument("--add_FT_dense", default=True, type=str2bool, required=False)
     
     
     # PARAMETERS FOR TRAINING
@@ -261,12 +268,17 @@ def main():
     parser.add_argument("--patience", default=10, type=int, required=False)
     parser.add_argument("--GPU", default=False, type=str2bool, required=False)
     parser.add_argument("--decay", default=None, type=float, required=False)
-    
+    parser.add_argument("--BatchNorm", default=True, type=str2bool, required=False)
     
 
     FLAGS = parser.parse_args()
     
     FLAGS.z_bins = [int(z) for z in FLAGS.z_bins]
+    FLAGS.filters = [int(z) for z in FLAGS.filters]
+    FLAGS.kernel_sizes = [int(z) for z in FLAGS.kernel_sizes]
+    FLAGS.strides = [int(z) for z in FLAGS.strides]
+    FLAGS.pool_sizes = [int(z) for z in FLAGS.pool_sizes]
+    FLAGS.strides_pooling = [int(z) for z in FLAGS.strides_pooling]
     
     if FLAGS.fine_tune:
         FLAGS_ORIGINAL = get_flags(FLAGS.log_path)
@@ -278,7 +290,7 @@ def main():
     else:
         out_path = FLAGS.models_dir+FLAGS.fname
       
-    if FLAGS.test_mode:
+    if FLAGS.test_mode and not FLAGS.fine_tune:
         out_path=out_path+'_test'
         
     #if not os.path.exists(out_path):
@@ -335,17 +347,40 @@ def main():
         drop=0
     else:
         drop=FLAGS.drop
-    if FLAGS.fine_tune:
-        k_1, k_2, k_3, n_dense, n_conv  = FLAGS_ORIGINAL.k1, FLAGS_ORIGINAL.k2, FLAGS_ORIGINAL.k3, FLAGS_ORIGINAL.n_dense, FLAGS_ORIGINAL.n_conv
-    else:
-        k_1, k_2, k_3, n_dense, n_conv  = FLAGS.k1, FLAGS.k2, FLAGS.k3, FLAGS.n_dense, FLAGS.n_conv
     
-    model=make_model(model_name = model_name, bayesian=bayesian,
-                     drop=drop, n_labels=n_classes, 
-                     input_shape=input_shape,
-                     k_1 = k_1,k_2=k_2, k_3=k_3,
-                     n_dense=n_dense, n_conv=n_conv, swap_axes=FLAGS.swap_axes
-                     )
+    
+    if FLAGS.fine_tune:
+        try:
+                BatchNorm=FLAGS_ORIGINAL.BatchNorm
+        except AttributeError:
+                print(' ####  FLAGS.BatchNorm not found! #### \n Probably loading an older model. Using BatchNorm=True')
+                BatchNorm=True
+
+        #k_1, k_2, k_3, n_dense, n_conv  = FLAGS_ORIGINAL.k1, FLAGS_ORIGINAL.k2, FLAGS_ORIGINAL.k3, FLAGS_ORIGINAL.n_dense, FLAGS_ORIGINAL.n_conv
+        filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense= FLAGS_ORIGINAL.filters, FLAGS_ORIGINAL.kernel_sizes, FLAGS_ORIGINAL.strides, FLAGS_ORIGINAL.pool_sizes, FLAGS_ORIGINAL.strides_pooling, FLAGS_ORIGINAL.n_dense
+    else:
+        try:
+            BatchNorm=FLAGS.BatchNorm
+        except AttributeError:
+            print(' ####  FLAGS.BatchNorm not found! #### \n Probably loading an older model. Using BatchNorm=True')
+            BatchNorm=True
+        #k_1, k_2, k_3, n_dense, n_conv  = FLAGS.k1, FLAGS.k2, FLAGS.k3, FLAGS.n_dense, FLAGS.n_conv
+        filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense
+
+    model=make_model(     model_name=model_name,
+                         drop=drop, 
+                          n_labels=n_classes, 
+                          input_shape=input_shape, 
+                          padding='valid', 
+                          filters=filters,
+                          kernel_sizes=kernel_sizes,
+                          strides=strides,
+                          pool_sizes=pool_sizes,
+                          strides_pooling=strides_pooling,
+                          activation=tf.nn.leaky_relu,
+                          bayesian=bayesian, 
+                          n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
+                             )
     
     
     model.build(input_shape=input_shape)
@@ -370,23 +405,29 @@ def main():
         print('Loading ckpt from %s' %ckpts_path)
         latest = tf.train.latest_checkpoint(ckpts_path)
         print('Loading ckpt %s' %latest)
-        ckpts_path = out_path+'/tf_ckpts_fine_tuning/'
+        if not FLAGS.test_mode:
+            ckpts_path = out_path+'/tf_ckpts_fine_tuning/'
+        else:
+            ckpts_path = out_path+'/tf_ckpts_fine_tuning_test/'
         ckpt_name = ckpt_name+'_fine_tuning'
+        if FLAGS.test_mode:
+            ckpt_name+='_test'
         ckpt.restore(latest)
         ckpt.optimizer.learning_rate = FLAGS.lr
         
         loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian)
         print('Loss after loading weights/ %s\n' %loss_1.numpy())
-        if not FLAGS.swap_axes:
-            dense_dim=4*4*k_2
+        if FLAGS.add_FT_dense:
+            if not FLAGS.swap_axes:
+                #raise NotImplementedError("2D case is not yet fixed")
+                dense_dim=filters[-1]#4*4*k_2
+            else:
+                dense_dim=filters[-1]
         else:
-            if FLAGS.n_conv==3:
-                dense_dim=k_3
-            elif FLAGS.n_conv==5:
-                dense_dim=k_2
-                
+            dense_dim=0
+            
         model = make_fine_tuning_model(base_model=model, n_out_labels=training_generator.n_classes,
-                                       dense_dim= dense_dim, bayesian=bayesian, trainable=True )
+                                       dense_dim= dense_dim, bayesian=bayesian, trainable=True, drop=drop,  BatchNorm=FLAGS.BatchNorm)
         model.build(input_shape=input_shape)
         print(model.summary())
     
@@ -428,7 +469,10 @@ def main():
 )
     hist_path =  out_path+'/hist.png'
     if FLAGS.fine_tune:
-        hist_path = out_path +'/hist_fine_tuning.png'  
+        if FLAGS.test_mode:
+            hist_path = out_path +'/hist_fine_tuning_test.png'
+        else:
+            hist_path = out_path +'/hist_fine_tuning.png'  
     
     plot_hist(DummyHist(history), epochs=len(history['loss']), save=True, path=hist_path, show=False)
     
