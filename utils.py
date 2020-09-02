@@ -129,7 +129,7 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False):
   if Verbose:
     print('n_keep: %s' %n_keep)
     
-  print('len(n_keep)/n_labels/n_noise=%s'%(n_keep/n_labels/n_noise))
+  #print('len(n_keep)/n_labels/n_noise=%s'%(n_keep/n_labels/n_noise))
   if n_keep<a or not((n_keep/n_labels/n_noise).is_integer()):   
     if Verbose:
       print('Sampling')
@@ -141,7 +141,7 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False):
   if Verbose:
     print('New length: %s' %idxs_new.shape[0])
     print(idxs_new.shape[0]%(bs/(n_labels*n_noise)))
-  print('len(idxs_new)/n_labels/n_noise=%s'%(idxs_new.shape[0]/n_labels/n_noise))
+  #print('len(idxs_new)/n_labels/n_noise=%s'%(idxs_new.shape[0]/n_labels/n_noise))
   if idxs_new.shape[0]%(bs/(n_labels*n_noise))!=0 or not((idxs_new.shape[0]/n_labels/n_noise).is_integer()) : #(n_labels*n_noise)%idxs_new.shape[0] !=0:
     if Verbose:
       print('Recursive call')
@@ -222,6 +222,9 @@ def parse_flags(FLAGS):
                     FLAGS[key]= False
                 else:
                     # it is a string
+                    if FLAGS[key]=='None':
+                        FLAGS[key]=None
+                    
                     #or_string=FLAGS[key]
                     #print(or_string)
                     #parsed_str = or_string.replace(' ', '\ ' )
@@ -251,8 +254,10 @@ def get_flags(log_path):
                 break
             else:
                 #print(line)
-                if line.split()[0]=='models_dir':
+                if line.split()[0]=='models_dir' :
+                    
                     key, value = line.split()[0], line.split()[1]+' '+line.split()[2]
+                            
                 elif line.split()[0]=='log_path':
                     # This case corresponds to log_path
                     key, value = line.split()[0], ''
@@ -293,6 +298,7 @@ def get_all_indexes(FLAGS, Test=False):
     else:
         data_dir = FLAGS.TEST_DIR
     labels =  ([name for name in os.listdir(data_dir) if not os.path.isfile(os.path.join(data_dir, name))])
+    
     if FLAGS.sort_labels:
         labels.sort()
     n_labels=len(labels)

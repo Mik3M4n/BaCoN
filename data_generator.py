@@ -102,9 +102,10 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.sample_pace !=1:
                 self.all_ks = np.loadtxt(self.norm_data_path)[0::sample_pace, 0]
         
+        #print('Data Gen using k max %s' %str(self.k_max))
         if self.k_max is not None:
-            self.i_max, k_max_res = find_nearest(self.all_ks, self.k_max) # self.all_ks[self.all_ks==self.k_max]
             print('Specified k_max is %s' %self.k_max)
+            self.i_max, k_max_res = find_nearest(self.all_ks, self.k_max) # self.all_ks[self.all_ks==self.k_max]
             print('Corresponding i_max is %s' %self.i_max)
             print('Closest k to k_max is %s' %k_max_res)
             #print('Selecting ks up to k_max=%s, or index %s for input k_max=%s' %(self.ind_max, k_max_res, self.k_max))
@@ -328,21 +329,24 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
               fname = fname_list[f_ind] 
               if self.Verbose:
                 print('Loading file %s' %fname)
-              try:
-                loaded_all = np.loadtxt(fname)
-                P_original, k = loaded_all[:, 1:], loaded_all[:, 0]
-                if self.sample_pace!=1:
+              #try:
+              loaded_all = np.loadtxt(fname)
+              P_original, k = loaded_all[:, 1:], loaded_all[:, 0]
+              if self.sample_pace!=1:
                   P_original = P_original[0::self.sample_pace, :]
                   k = k[0::self.sample_pace]
                   P_original, k = P_original[:self.i_max], k[:self.i_max]
                   if self.Verbose:
                       print('Dimension of original data: %s' %str(P_original.shape))
                 
-              except OSError:
-                if len(self.list_IDs)==1:
-                    new_ind =  int((t_st.split('/')[-1]).split('.')[0])+len(self.labels)
-                    fname1 = self.data_root + '/'+l+ '/'+ str(new_ind) + '.txt'
-                    print('File %s not found, trying with  %s'  %(fname, fname1))
+              #except OSError:
+              #  print('RUN WITH DIFFERENT SEED.')
+              #  if len(self.list_IDs)==1:
+              #      new_ind =  int((t_st.split('/')[-1]).split('.')[0])+len(self.labels)
+                    #l = 
+              #      fname1 = self.data_root + '/'+l+ '/'+ str(new_ind) + '.txt'
+              #      print('File %s not found, trying with  %s'  %(fname, fname1))
+                    
                     
               # Add noise
               for i_noise in range(self.n_noisy_samples):
@@ -495,14 +499,14 @@ def create_generators(FLAGS):
     print('batch_size: %s' %batch_size)
 
     if not FLAGS.test_mode:
-        train_index_1  = cut_sample(train_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=True)
+        train_index_1  = cut_sample(train_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=False)
         print('Train index length: %s' %train_index_1.shape[0])
     else:
         train_index_1 = train_index
         print('Train index: %s' %train_index_1)
     print('--Validation')
     if not FLAGS.test_mode:
-        val_index_1  = cut_sample(val_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=True)
+        val_index_1  = cut_sample(val_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=False)
         print('Val index length: %s'  %val_index_1.shape[0])
     else:
         val_index_1 = val_index

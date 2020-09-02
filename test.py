@@ -38,31 +38,45 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_O
     print('Features shape: %s' %str(generator[0][0].shape))
     print('Labels shape: %s' %str(generator[0][1].shape))
     
+    try:
+        BatchNorm=FLAGS.BatchNorm
+    except AttributeError:
+        print(' ####  FLAGS.BatchNorm not found! #### \n Probably loading an older model. Using BatchNorm=True')
+        BatchNorm=True
     
-    
-    drop=0.
-    model=make_model(model_name = FLAGS.model_name, bayesian=FLAGS.bayesian,
-                     drop=drop, n_labels=n_classes, 
-                     input_shape=input_shape,
-                     k_1 = FLAGS.k1,k_2=FLAGS.k2, k_3=FLAGS.k3,
-                     n_dense=FLAGS.n_dense, n_conv=FLAGS.n_conv, swap_axes=FLAGS.swap_axes
-                     )
+    #drop=0.
+    model=make_model(  model_name=FLAGS.model_name,
+                         drop=0, 
+                          n_labels=n_classes, 
+                          input_shape=input_shape, 
+                          padding='valid', 
+                          filters=FLAGS.filters,
+                          kernel_sizes=FLAGS.kernel_sizes,
+                          strides=FLAGS.strides,
+                          pool_sizes=FLAGS.pool_sizes,
+                          strides_pooling=FLAGS.strides_pooling,
+                          activation=tf.nn.leaky_relu,
+                          bayesian=FLAGS.bayesian, 
+                          n_dense=FLAGS.n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
+                          )            
+            
+
     
     model.build(input_shape=input_shape)
     #print(model.summary())
     
     if FLAGS.fine_tune:
-        if not FLAGS.swap_axes:
-            dense_dim=4*4*FLAGS.k2
-        else:
-            if FLAGS.n_conv==3:
-                dense_dim=FLAGS.k3
-            elif FLAGS.n_conv==5:
-                dense_dim=FLAGS.k2
+        #if not FLAGS.swap_axes:
+        #    dense_dim=4*4*FLAGS.k2
+        #else:
+        #    if FLAGS.n_conv==3:
+        dense_dim=FLAGS.filters[-1]#FLAGS.k3
+      #      elif FLAGS.n_conv==5:
+       #         dense_dim=FLAGS.k2
 
             
         model = make_fine_tuning_model(base_model=model, n_out_labels=n_classes,
-                                       dense_dim= dense_dim, bayesian=FLAGS.bayesian, trainable=False )
+                                       dense_dim= dense_dim, bayesian=FLAGS.bayesian, trainable=False, drop=0, BatchNorm=FLAGS.BatchNorm )
         model.build(input_shape=input_shape)
     print(model.summary())
     
@@ -314,6 +328,8 @@ def main():
     if args.sigma_sys is not None:
             n_flag_ow=True
             FLAGS.sigma_sys=args.sigma_sys
+    
+    
     if n_flag_ow:
         print('Overwriting noise flags. Using n_noisy_samples=%s, add_shot=%s, add_sys=%s, sigma_sys=%s' %(FLAGS.n_noisy_samples, str(FLAGS.add_shot),str(FLAGS.add_sys), FLAGS.sigma_sys))
         
