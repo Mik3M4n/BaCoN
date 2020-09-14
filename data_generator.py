@@ -70,11 +70,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         
                 
         self.swap_axes = swap_axes
-        
-        #self.i_start=4-n_channels
-        #if self.i_start<0:
-        #    raise ValueError('N. of channels should be <= 4')
-        
+         
         
         self.k_max=k_max
         self.i_max=i_max
@@ -156,6 +152,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         #print('Batch size: %s' %self.batch_size)
         #print('N. samples used for each different label: %s' %self.n_indexes)
         self.save_indexes = save_indexes
+        if self.save_indexes:
+            self.save_indexes_dict={}
         self.normalization=normalization
         
         if self.normalization=='stdcosmo':
@@ -421,16 +419,21 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
           if self.save_indexes:
             fname_list_shuffled = fname_list[p]
           
-        if self.save_indexes:         
-          idx_file = self.models_dir+'idx_files/idx_file_batch'+ str(self.batch_idx)+'_' +self.idx_file_name+'.txt'                  
+        if self.save_indexes:  
+          if not os.path.exists(self.models_dir+'/idx_files/'):
+              print('Creating directory %s' %self.models_dir+'/idx_files/')
+              os.makedirs(self.models_dir+'/idx_files/')
+            
+          idx_file = self.models_dir+'/idx_files/idx_file_batch'+ str(self.batch_idx)+'.txt'                  
           #label_list = [f.split('/')[2] for f in fname_list]
+          print('Saving indexes in  %s' %idx_file)
           idx_list = [int(f.split('.')[0].split('/')[-1] ) for f in fname_list_shuffled]
-
-          with open(idx_file, 'w') as file:
-            for idx in idx_list: #i in range(len(idx_list)):
-              #idx = idx_list[i]
-              #lab = self.labels_dict[label_list[i]]
-              file.write("%i\n" %idx)
+          self.save_indexes_dict[self.batch_idx] = idx_list
+          
+          with open(idx_file, 'w+') as file:
+              print('Opened %s' %idx_file)
+              for idx in idx_list: #i in range(len(idx_list)):
+                  file.write("%i\n" %idx)
        
 
         #print('Seen in this batch: ')
@@ -614,26 +617,7 @@ def create_test_generator(FLAGS):
     partition_test = {'test': test_index_1}
     
     
-    try:
-        sigma_sys=FLAGS.sigma_sys
-    except AttributeError:
-        print(' ####  FLAGS.sigma_sys not found! #### \n Probably loading an older model. Using sigma_sys=15')
-        FLAGS.sigma_sys=15
-        
-    try:
-        z_bins=FLAGS.z_bins
-    except AttributeError:
-        print(' ####  FLAGS.z_bins not found! #### \n Probably loading an older model. Using 4 z bins')
-        FLAGS.z_bins=[0, 1, 2, 3]
-    try:
-        swap_axes=FLAGS.swap_axes
-    except AttributeError:
-        if FLAGS.im_channels>1:
-            FLAGS.swap_axes=True
-        else:
-            FLAGS.swap_axes=False
-        print(' ####  FLAGS.swap_axes not found! #### \n Probably loading an older model. Set swap_axes=%s' %str(swap_axes))
-
+ 
     
     params_test = {'dim': (FLAGS.im_depth, FLAGS.im_width),
           'batch_size':batch_size, # should satisfy  m x Batch size /( n_labels x n_noisy_samples) =  n_indexes  with m a positive integer
@@ -647,7 +631,7 @@ def create_test_generator(FLAGS):
           'add_shot':FLAGS.add_shot, 'add_sys':FLAGS.add_sys,
           'k_max':FLAGS.k_max, 'i_max':FLAGS.i_max, 'sigma_sys':FLAGS.sigma_sys,
           'swap_axes':FLAGS.swap_axes,
-          'z_bins':FLAGS.z_bins
+          'z_bins':FLAGS.z_bins,
           }
     
     if FLAGS.fine_tune:
@@ -663,8 +647,9 @@ def create_test_generator(FLAGS):
     test_generator = DataGenerator(partition_test['test'], 
                                    labels, labels_dict, 
                                    data_root=FLAGS.TEST_DIR , 
-                               save_indexes = False, 
-                               idx_file_name = FLAGS.fname,
+                               save_indexes = FLAGS.save_indexes,
+                               models_dir=FLAGS.models_dir+FLAGS.fname,
+                               idx_file_name = FLAGS.fname, 
                                **params_test)
 
     

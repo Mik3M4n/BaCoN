@@ -15,7 +15,6 @@ tf.enable_v2_behavior()
 tfd = tfp.distributions
 from data_generator import create_test_generator, create_generators
 from models import *
-#from flags import FLAGS
 from utils import DummyHist, plot_hist, str2bool, get_flags
 
 from train import ELBO, my_loss
@@ -103,7 +102,8 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_O
     if latest:
           print("Restoring checkpoint from {}".format(latest))
     else:
-        print('Checkpoint not found')
+        raise ValueError('Checkpoint not found')
+        #print('Checkpoint not found')
     ckpt.restore(latest)
     #ckpt.restore(manager.latest_checkpoint)
     
@@ -194,12 +194,31 @@ def evaluate_accuracy(model, test_generator, out_path, names=None, FLAGS=None):
     return tot_acc
 
 
-def predict_bayes_label(median, th_prob=0.5):
-  if median[median>th_prob].numpy().sum()==0.:
+def predict_bayes_label(mean_prob, th_prob=0.5):
+  if mean_prob[mean_prob>th_prob].numpy().sum()==0.:
       pred_label = 99.
   else:
-      pred_label = tf.argmax(median).numpy()
+      pred_label = tf.argmax(mean_prob).numpy()
   return pred_label
+
+
+def predict_mean_proba(X, model, num_monte_carlo=100):
+        sampled_logits = tf.stack([model.predict(X, verbose=0)
+                          for _ in range(num_monte_carlo)], axis=0)
+        sampled_probas = tf.nn.softmax(sampled_logits, axis=-1)
+        print("sampled_probas shape: %s" %str(sampled_probas.shape))
+        mean_proba=tf.reduce_mean(sampled_probas, axis=0)
+        print("mean_proba  shape: %s" %str(mean_proba.shape))
+        return mean_proba, sampled_probas
+
+
+def predict(X, model, num_monte_carlo=100, th_prob=0.5):
+
+  print('using th_prob=%s'%th_prob)
+  mean_proba, sampled_probas = predict_mean_proba(X, model, num_monte_carlo=num_monte_carlo)
+  mean_pred = tf.map_fn(fn=lambda x: predict_bayes_label(x, th_prob=th_prob), elems=mean_proba)
+
+  return sampled_probas, mean_proba, mean_pred 
 
 
 def evaluate_accuracy_bayes(model, test_generator, out_path, num_monte_carlo=50, th_prob=0.5, names=None, FLAGS=None):
@@ -210,40 +229,39 @@ def evaluate_accuracy_bayes(model, test_generator, out_path, num_monte_carlo=50,
     print('Threshold probability for classification: %s ' %th_prob)
     for batch_idx, batch in enumerate(test_generator):
         X, y = batch
-        
         y_true = tf.argmax(y, axis=1)
         
-        sampled_logits = tf.stack([model.predict(X, verbose=0)
-                          for _ in range(num_monte_carlo)], axis=0)
-        sampled_probas = tf.nn.softmax(sampled_logits, axis=-1)
-        median_proba = tfp.stats.percentile(sampled_probas, 50, axis=0)
-        #median_pred = tf.argmax(median_proba, axis=1)
-        median_pred = tf.map_fn(fn=lambda x: predict_bayes_label(x, th_prob=th_prob), elems=median_proba)
+        # Predict mean probability in each class by averaging on MC samples, then  label with prob threshold
+        sampled_probas, mean_proba, mean_pred = predict(X, model, num_monte_carlo, th_prob)
         
-        equality_batch = tf.equal(tf.cast(median_pred, dtype=tf.int64), y_true)
-        accuracy = tf.reduce_mean(tf.cast(equality_batch, tf.float32))        
+        # Compute accuracy
+        equality_batch = tf.equal(tf.cast(mean_pred, dtype=tf.int64), y_true)
+        accuracy = tf.reduce_mean(tf.cast(equality_batch, tf.float32))  
         
         print('Accuracy on %s batch using median of sampled probabilities: %s %%' %(batch_idx, accuracy.numpy()))
         acc_total += accuracy
         y_true_tot.append(y_true)
-        y_pred_tot.append(median_pred)
+        y_pred_tot.append(mean_pred)
         all_sampled_probas.append(sampled_probas)
     tot_acc = acc_total/test_generator.n_batches
     print('-- Accuracy on test set using median of sampled probabilities: %s %% \n' %( tot_acc.numpy()))  
     
     all_sampled_probas=tf.concat(all_sampled_probas, axis=1)
-    all_preds = tf.argmax(all_sampled_probas, axis=-1)
+    print('Computing predictions on all test examples and all MC samples...')
+    all_preds = tf.map_fn(fn=lambda x: tf.map_fn(lambda y: predict_bayes_label(y, th_prob=th_prob), elems=x), elems=all_sampled_probas)
+    all_preds=tf.cast(all_preds, dtype=tf.int64)
+    
     all_y_true=tf.concat(y_true_tot, axis=0)
     equality_arr = np.array([ tf.reduce_mean(tf.cast(tf.equal(my_pred, all_y_true), tf.float32)) for my_pred in all_preds])
     
     high = np.percentile(equality_arr, 95)
     low= np.percentile(equality_arr, 5)
-    median_arr=np.percentile(equality_arr, 50)
-    t_string = 'Median: %s + %s -%s (95%% C.I.), %s samples' %(np.round(median_arr,3), np.round(high-median_arr,3) ,np.round(median_arr-low,3), num_monte_carlo)
+    median_arr=tf.reduce_mean(equality_arr) #np.percentile(equality_arr, 50)
+    t_string = r'Accuracy: %s + %s -%s (Mean $\pm$ 95%% C.I.), %s samples' %(np.round(median_arr,3), np.round(high-median_arr,3) ,np.round(median_arr-low,3), num_monte_carlo)
     import matplotlib.pyplot as plt
     _ = plt.hist(equality_arr)
-    plt.xlabel(r'$Test \: Accuracy: \: Binary classification$', fontsize=15)
-    plt.ylabel(r'$\mathrm{Counts}$', fontsize=15)
+    plt.xlabel(r'Test Accuracy', fontsize=15)
+    plt.ylabel(r'Counts', fontsize=15)
     plt.title(t_string)
     print(t_string)
     acc_path = out_path+'/accuracy_hist'
@@ -276,6 +294,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--log_path", default='', type=str, required=True)
     parser.add_argument("--TEST_DIR", default=None, type=str, required=False)
+    parser.add_argument("--models_dir", default=None, type=str, required=False)
     
     parser.add_argument("--n_monte_carlo_samples", default=50, type=int, required=False)
     parser.add_argument("--th_prob", default=0.5, type=float, required=False)
@@ -289,6 +308,9 @@ def main():
     parser.add_argument("--add_sys", default=None, type=str2bool, required=False)
     parser.add_argument("--sigma_sys", default=None, type=float, required=False)
     
+    parser.add_argument("--save_indexes", default=None, type=str2bool, required=False)
+    
+    
     
     
     
@@ -298,18 +320,16 @@ def main():
     n_flag_ow=False
     FLAGS = get_flags(args.log_path)
     
-    
-    try:
-        sigma_sys=FLAGS.sigma_sys
-    except AttributeError:
-        print(' ####  FLAGS.sigma_sys not found! #### \n Probably loading an older model. Using sigma_sys=15')
-        FLAGS.sigma_sys=15
-    
-    
-    
+     
+    if args.save_indexes is not None:
+        print('Setting save_indexes to %s' %args.save_indexes)
+        FLAGS.save_indexes = args.save_indexes
     if args.TEST_DIR is not None:
         print('Using data in the directory %s' %args.TEST_DIR)
         FLAGS.TEST_DIR = args.TEST_DIR
+    if args.models_dir is not None:
+        print('Reading model from the directory %s' %args.models_dir)
+        FLAGS.models_dir = args.models_dir
     if args.batch_size is not None:
         print('Using batch_size %s' %args.batch_size)
         FLAGS.batch_size = args.batch_size
@@ -333,16 +353,6 @@ def main():
     if n_flag_ow:
         print('Overwriting noise flags. Using n_noisy_samples=%s, add_shot=%s, add_sys=%s, sigma_sys=%s' %(FLAGS.n_noisy_samples, str(FLAGS.add_shot),str(FLAGS.add_sys), FLAGS.sigma_sys))
         
-    try:
-        swap_axes=FLAGS.swap_axes
-    except AttributeError:
-        if FLAGS.im_channels>1:
-            swap_axes=True
-        else:
-            swap_axes=False
-        FLAGS.swap_axes=swap_axes
-        #print(FLAGS.swap_axes)
-        print(' ####  FLAGS.swap_axes not found! #### \n Probably loading an older model. Set swap_axes=%s' %str(swap_axes))      
         
         
     print('\n -------- Parameters:')
