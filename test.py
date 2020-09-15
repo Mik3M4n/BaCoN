@@ -72,7 +72,10 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_O
         dense_dim=FLAGS.filters[-1]#FLAGS.k3
       #      elif FLAGS.n_conv==5:
        #         dense_dim=FLAGS.k2
-
+        if len(FLAGS.c_1)==1:
+            ft_ckpt_name = '_'+('-').join(FLAGS.c_1)+'vs'+('-').join(FLAGS.c_0)
+        else:
+            ft_ckpt_name=''
             
         model = make_fine_tuning_model(base_model=model, n_out_labels=n_classes,
                                        dense_dim= dense_dim, bayesian=FLAGS.bayesian, trainable=False, drop=0, BatchNorm=FLAGS.BatchNorm )
@@ -91,7 +94,7 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_O
     ckpts_path = out_path+'/tf_ckpts'
     #ckpt_name = 'ckpt'
     if FLAGS.fine_tune:
-        ckpts_path += '_fine_tuning'
+        ckpts_path += '_fine_tuning'+ft_ckpt_name
     ckpts_path+='/'
     print('Looking for ckpt in ' + ckpts_path)
     ckpt = tf.train.Checkpoint(optimizer=optimizer, net=model)
@@ -133,6 +136,8 @@ def compute_loss(generator, model, bayesian=False):
 def print_cm(cm, names, out_path, fine_tune=False):
     import pandas as pd
     import matplotlib.pyplot as plt
+    plt.rcParams["font.family"] = 'serif'
+    plt.rcParams["mathtext.fontset"] = "cm"
     import seaborn as sns
     
     matrix_proportions = np.zeros((len(names),len(names)))
@@ -259,6 +264,8 @@ def evaluate_accuracy_bayes(model, test_generator, out_path, num_monte_carlo=50,
     median_arr=tf.reduce_mean(equality_arr) #np.percentile(equality_arr, 50)
     t_string = r'Accuracy: %s + %s -%s (Mean $\pm$ 95%% C.I.), %s samples' %(np.round(median_arr,3), np.round(high-median_arr,3) ,np.round(median_arr-low,3), num_monte_carlo)
     import matplotlib.pyplot as plt
+    plt.rcParams["font.family"] = 'serif'
+    plt.rcParams["mathtext.fontset"] = "cm"
     _ = plt.hist(equality_arr)
     plt.xlabel(r'Test Accuracy', fontsize=15)
     plt.ylabel(r'Counts', fontsize=15)

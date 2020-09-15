@@ -250,12 +250,11 @@ def get_flags(log_path):
         #header_line = next(f)
         #print('Skipping %s' %header_line)
         #for line in f:
-            if '------------ CREATING DATA GENERATORS ------------' in line:
+            if '------------ CREATING DATA GENERATORS ------------' in line or not line.strip():
                 break
             else:
                 #print(line)
                 if line.split()[0]=='models_dir' :
-                    
                     key, value = line.split()[0], line.split()[1]+' '+line.split()[2]
                             
                 elif line.split()[0]=='log_path':
@@ -266,7 +265,6 @@ def get_flags(log_path):
                 
                 elif line.split()[0] in ('c_0', 'c_1'):
                     key, value = line.split()[0], [line.split()[1:][i].strip('\[,\' \]') for i in range(len(line.split()[1:]))]
-                #elif line.split()[0]=='fine_tune_dict' :
                 elif len(line.split())==2:
                     key, value = line.split()[0], line.split()[1] 
                 else:
@@ -277,7 +275,12 @@ def get_flags(log_path):
     FLAGS.pop('--------')
     FLAGS = parse_flags(FLAGS)
     if 'c_1' in FLAGS.keys():
-        fine_tune_dict={ label:'non_lcdm' for label in FLAGS['c_1']}
+        if len(FLAGS['c_1'])>1:
+            fine_tune_dict={ label:'non_lcdm' for label in FLAGS['c_1']}
+        else:
+            fine_tune_dict={ label:label for label in FLAGS['c_1']}
+        
+        #fine_tune_dict={ label:'non_lcdm' for label in FLAGS['c_1']}
         FLAGS['fine_tune_dict'] = fine_tune_dict
         for i in range(len(FLAGS['c_0']) ):
           FLAGS['fine_tune_dict'][FLAGS['c_0'][i]]=FLAGS['c_0'][i]
@@ -297,19 +300,36 @@ def get_all_indexes(FLAGS, Test=False):
         data_dir = FLAGS.DIR
     else:
         data_dir = FLAGS.TEST_DIR
-    labels =  ([name for name in os.listdir(data_dir) if not os.path.isfile(os.path.join(data_dir, name))])
+    all_labels =  ([name for name in os.listdir(data_dir) if not os.path.isfile(os.path.join(data_dir, name))])
     
-    if FLAGS.sort_labels:
-        labels.sort()
-    n_labels=len(labels)
+
+    
     if not FLAGS.fine_tune:
-        print('N labels : %s' %n_labels)
+        labels=all_labels
+        if FLAGS.sort_labels:
+            labels.sort()
         labels_dict = {labels[i]:int(i) for i in range(len(labels))}
-        print('Labels encoding: ')
-        print(labels_dict)
+    else:
+        if len(FLAGS.c_1)>1:
+            c_1_class_name='non_lcdm'
+            labels=['lcdm', c_1_class_name]
+        else:
+            c_1_class_name=FLAGS.c_1[0]
+            labels = [l for l in FLAGS.c_1]+[l for l in FLAGS.c_0]
+            if not all(elem in all_labels  for elem in labels):
+                raise ValueError('Specified labels for fine-tuning are not in the dataset!')
+        #labels_dict={ label:1 for label in FLAGS.c_1}
+        #for i in range(len(FLAGS.c_0) ):
+        #  labels_dict[FLAGS.c_0[i]]=0 #FLAGS.c_0[i]
+        labels_dict = {'lcdm':0, c_1_class_name:1}
     
+    print('labels : %s' %labels)
+    print('Labels encoding: ')
+    print(labels_dict)
+    n_labels=len(np.unique([val for val in labels_dict.values()]))
+    print('n_labels : %s' %n_labels)
     n_s=[]
-    for l in labels:
+    for l in all_labels:
         if not Test:
             dir_name=data_dir+'/'+l
         else:
@@ -318,7 +338,7 @@ def get_all_indexes(FLAGS, Test=False):
         print('%s - %s training examples' %(l,n_samples))
         n_s.append(n_samples)
 
-    for i in range(len(labels)-1):
+    for i in range(len(all_labels)-1):
         assert n_s[i] == n_s[i+1]
     
     n_samples = n_s[0]
@@ -346,12 +366,9 @@ def get_all_indexes(FLAGS, Test=False):
         val_size=None
     n_samples=all_index.shape[0]
     
-    if FLAGS.fine_tune:
-        #n_labels = 2*len(FLAGS.c_1)
-        labels = ['lcdm', 'non_lcdm']
-        labels_dict = {'lcdm':0, 'non_lcdm':1}
-        n_labels=2
 
+        
+    print('get_all_indexes labels dict: %s' %str(labels_dict)) 
     return all_index, n_samples, val_size, n_labels, labels, labels_dict
 
 

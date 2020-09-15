@@ -201,6 +201,10 @@ def main():
     parser.add_argument("--seed", default=1312, type=int, required=False)
     
     parser.add_argument("--fine_tune", default=False, type=str2bool, required=False)
+    parser.add_argument("--c_0", nargs='+', default=['lcdm'], required=False)
+    parser.add_argument("--c_1", nargs='+', default=['fR', 'dgp', 'wcdm', 'rand'], required=False)
+    
+    
     parser.add_argument("--log_path", default='', type=str, required=False)
     
     parser.add_argument("--restore", default=False, type=str2bool, required=False)
@@ -279,12 +283,28 @@ def main():
     FLAGS.strides = [int(z) for z in FLAGS.strides]
     FLAGS.pool_sizes = [int(z) for z in FLAGS.pool_sizes]
     FLAGS.strides_pooling = [int(z) for z in FLAGS.strides_pooling]
+    FLAGS.c_1.sort()
+    FLAGS.c_0.sort()
+    
     
     if FLAGS.fine_tune:
         FLAGS_ORIGINAL = get_flags(FLAGS.log_path)
-        FLAGS.c_0 = ['lcdm',]
-        FLAGS.c_1 = ['fR', 'dgp', 'wcdm', 'rand']
-        FLAGS.fine_tune_dict = {'lcdm': 'lcdm', 'fR':'non_lcdm', 'dgp': 'non_lcdm', 'wcdm':'non_lcdm', 'rand':'non_lcdm' }
+        #FLAGS.c_0 = ['lcdm',]
+        #FLAGS.c_1 = ['fR', 'dgp', 'wcdm', 'rand']
+        #FLAGS.fine_tune_dict = {'lcdm': 'lcdm', 'fR':'non_lcdm', 'dgp': 'non_lcdm', 'wcdm':'non_lcdm', 'rand':'non_lcdm' }
+        if len(FLAGS.c_1)>1:
+            ft_ckpt_name = ''
+            fine_tune_dict={ label:'non_lcdm' for label in FLAGS.c_1}
+        else:
+            # fine tuning 1vs 1
+            fine_tune_dict={ label:label for label in FLAGS.c_1}
+            ft_ckpt_name = '_'+('-').join(FLAGS.c_1)+'vs'+('-').join(FLAGS.c_0)
+        
+        
+        
+        FLAGS.fine_tune_dict = fine_tune_dict
+        for i in range(len(FLAGS.c_0) ):
+          FLAGS.fine_tune_dict[FLAGS.c_0[i]]=FLAGS.c_0[i]
         out_path = FLAGS_ORIGINAL.models_dir+FLAGS_ORIGINAL.fname
         
     else:
@@ -316,10 +336,11 @@ def main():
     
     
     
-    print('------------ CREATING DATA GENERATORS ------------\n')
+    print('\n------------ CREATING DATA GENERATORS ------------')
     training_generator, validation_generator = create_generators(FLAGS)
     
     if FLAGS.fine_tune:
+        print('\n------------ CREATING ORIGINAL DATA GENERATORS FOR CHECK------------')
         or_training_generator, or_validation_generator = create_generators(FLAGS_ORIGINAL)
         n_classes = or_training_generator.n_classes # in order to build correctly original model
         model_name = FLAGS_ORIGINAL.model_name
@@ -333,7 +354,7 @@ def main():
     
     
     
-    print('------------ BUILDING MODEL ------------\n')
+    print('------------ BUILDING MODEL ------------')
     if FLAGS.swap_axes:
         input_shape = ( int(training_generator.dim[0]), 
                    int(training_generator.n_channels))
@@ -406,10 +427,10 @@ def main():
         latest = tf.train.latest_checkpoint(ckpts_path)
         print('Loading ckpt %s' %latest)
         if not FLAGS.test_mode:
-            ckpts_path = out_path+'/tf_ckpts_fine_tuning/'
+            ckpts_path = out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name+'/'
         else:
-            ckpts_path = out_path+'/tf_ckpts_fine_tuning_test/'
-        ckpt_name = ckpt_name+'_fine_tuning'
+            ckpts_path = out_path+'/tf_ckpts_fine_tuning_test'+ft_ckpt_name+'/'
+        ckpt_name = ckpt_name+'_fine_tuning'+ft_ckpt_name
         if FLAGS.test_mode:
             ckpt_name+='_test'
         ckpt.restore(latest)
@@ -470,9 +491,9 @@ def main():
     hist_path =  out_path+'/hist.png'
     if FLAGS.fine_tune:
         if FLAGS.test_mode:
-            hist_path = out_path +'/hist_fine_tuning_test.png'
+            hist_path = out_path +'/hist_fine_tuning'+ft_ckpt_name+'_test.png'
         else:
-            hist_path = out_path +'/hist_fine_tuning.png'  
+            hist_path = out_path +'/hist_fine_tuning'+ft_ckpt_name+'.png'  
     
     plot_hist(DummyHist(history), epochs=len(history['loss']), save=True, path=hist_path, show=False)
     

@@ -174,6 +174,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         
         if self.fine_tune:
             if self.batch_size%(self.n_classes*len(self.c_1)*self.n_noisy_samples):
+                print('batch_size,n_classes, len(c_1), n_noisy_samples= %s, %s, %s, %s '%(self.batch_size, self.n_classes, len(self.c_1), self.n_noisy_samples))
                 raise ValueError('batch size must be multiple of n_classes x len(c_1) x n_noisy_samples')
         else:
             if self.batch_size%(self.n_classes*self.n_noisy_samples):
@@ -313,8 +314,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         else:
             #print(list_IDs_temp)
             fname_list = get_fname_list(self.c_0, self.c_1, list_IDs_temp, self.data_root)
-        if self.fine_tune and self.Verbose:
+        if self.fine_tune and self.Verbose :
             print(fname_list)
+        
         #print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size, self.n_noisy_samples))
         assert len(fname_list)==self.batch_size//(self.n_noisy_samples)
         #print('N. of files used: %s' %fname_list.shape[0])
@@ -385,6 +387,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 else:
                     label = self.fine_tune_dict[label]
                     encoding = self.labels_dict[label]
+                   # print('Label for this example: %s' %label)
+                   # print('Encoding: %s' % encoding)
                 #if not self.fine_tune:
                 #    ind = (f_ind)%(self.n_classes)
                 #   assert label==self.inv_labels_dict[ind]
@@ -491,7 +495,7 @@ def create_generators(FLAGS):
         n_noisy_samples = FLAGS.n_noisy_samples
     else:
         n_noisy_samples = 1
-    print('--Train')
+    print('--create_generators, train indexes')
     if FLAGS.test_mode:
         if not FLAGS.fine_tune:
             batch_size=train_index.shape[0]*n_labels_eff*n_noisy_samples
@@ -507,7 +511,7 @@ def create_generators(FLAGS):
     else:
         train_index_1 = train_index
         print('Train index: %s' %train_index_1)
-    print('--Validation')
+    print('--create_generators, validation indexes')
     if not FLAGS.test_mode:
         val_index_1  = cut_sample(val_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=False)
         print('Val index length: %s'  %val_index_1.shape[0])
@@ -569,9 +573,9 @@ def create_generators(FLAGS):
     if not params['add_noise']:
         params['n_noisy_samples']=1
     
-    print('--Train')
+    print('--DataGenerator Train')
     training_generator = DataGenerator(partition['train'], labels, labels_dict, data_root = FLAGS.DIR, save_indexes=False, **params)
-    print('--Validation')
+    print('--DataGenerator Validation')
     validation_generator = DataGenerator(partition['validation'], labels, labels_dict, data_root = FLAGS.DIR,  save_indexes=False, **params)
 
     
