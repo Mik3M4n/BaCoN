@@ -19,7 +19,7 @@ from utils import DummyHist, plot_hist, str2bool, get_flags
 
 from train import ELBO, my_loss
 
-
+ft_ver= ''
 
 def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_ORIGINAL=None):
     
@@ -29,7 +29,6 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_O
     #        print (key,value)
      
 
-     
     
     print('------------ BUILDING MODEL ------------\n')
     
@@ -65,13 +64,12 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_O
     #print(model.summary())
     
     if FLAGS.fine_tune:
-        #if not FLAGS.swap_axes:
-        #    dense_dim=4*4*FLAGS.k2
-        #else:
-        #    if FLAGS.n_conv==3:
-        dense_dim=FLAGS.filters[-1]#FLAGS.k3
-      #      elif FLAGS.n_conv==5:
-       #         dense_dim=FLAGS.k2
+        
+        if FLAGS.add_FT_dense:
+            dense_dim=FLAGS.filters[-1]
+        else:
+            dense_dim=0
+
         if len(FLAGS.c_1)==1:
             ft_ckpt_name = '_'+('-').join(FLAGS.c_1)+'vs'+('-').join(FLAGS.c_0)
         else:
@@ -91,11 +89,14 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_O
     print('------------ RESTORING CHECKPOINT ------------\n')
     out_path = FLAGS.models_dir+FLAGS.fname
     optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
-    ckpts_path = out_path+'/tf_ckpts'
+    ckpts_path = out_path
+    if ft_ver!='':
+        ckpts_path +='/other_FT'
+    ckpts_path+='/tf_ckpts'
     #ckpt_name = 'ckpt'
     if FLAGS.fine_tune:
         ckpts_path += '_fine_tuning'+ft_ckpt_name
-    ckpts_path+='/'
+    ckpts_path+=ft_ver+'/'
     print('Looking for ckpt in ' + ckpts_path)
     ckpt = tf.train.Checkpoint(optimizer=optimizer, net=model)
     
@@ -164,7 +165,7 @@ def print_cm(cm, names, out_path, fine_tune=False):
     #plt.show()
     cm_path = out_path+'/cm'
     if fine_tune:
-        cm_path+='_FT'
+        cm_path+='_FT'+ft_ver
     cm_path+='.png'
     plt.savefig(cm_path)
     print('Saved confusion matrix at %s' %cm_path)
@@ -201,7 +202,7 @@ def evaluate_accuracy(model, test_generator, out_path, names=None, FLAGS=None):
 
 def predict_bayes_label(mean_prob, th_prob=0.5):
   if mean_prob[mean_prob>th_prob].numpy().sum()==0.:
-      pred_label = 99.
+      pred_label = 99
   else:
       pred_label = tf.argmax(mean_prob).numpy()
   return pred_label
@@ -273,10 +274,11 @@ def evaluate_accuracy_bayes(model, test_generator, out_path, num_monte_carlo=50,
     print(t_string)
     acc_path = out_path+'/accuracy_hist'
     if FLAGS.fine_tune:
-        acc_path+='_FT'
-    acc_path+='.png' 
+        acc_path+='_FT'+ft_ver
+    acc_path+='.png'
+    print('Saving histogram of accuracy at %s' %acc_path)
     plt.savefig(acc_path)
-    print('Saved histogram of accuracy at %s' %acc_path)
+    
     
     #### CONFUSION MATRIX
     from sklearn.metrics import confusion_matrix

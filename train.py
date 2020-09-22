@@ -260,6 +260,7 @@ def main():
     parser.add_argument("--strides_pooling", nargs='+', default=[2,1,1], required=False)
     
     parser.add_argument("--add_FT_dense", default=True, type=str2bool, required=False)
+    parser.add_argument("--trainable", default=True, type=str2bool, required=False)
     
     
     # PARAMETERS FOR TRAINING
@@ -446,9 +447,9 @@ def main():
                 dense_dim=filters[-1]
         else:
             dense_dim=0
-            
+        
         model = make_fine_tuning_model(base_model=model, n_out_labels=training_generator.n_classes,
-                                       dense_dim= dense_dim, bayesian=bayesian, trainable=True, drop=drop,  BatchNorm=FLAGS.BatchNorm)
+                                       dense_dim= dense_dim, bayesian=bayesian, trainable=FLAGS.trainable, drop=drop,  BatchNorm=FLAGS.BatchNorm)
         model.build(input_shape=input_shape)
         print(model.summary())
     

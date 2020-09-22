@@ -57,7 +57,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                   z_bins=[0, 1, 2, 3], swap_axes=False,
                  ):
       
-        'Initialization'
+        print('\n Data Generator Initialization')
 
         
         self.sigma_sys=sigma_sys
@@ -146,7 +146,14 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         
         
         self.n_classes = len(self.labels)
+        #if self.fine_tune:
+        #   self.n_classes = len(self.c_1)*2 #number of labels to predict
+        #else:
+        #    self.n_classes = self.n_labels #number of different classes in the training set
         
+        print('N. classes: %s' %self.n_classes) 
+        #print('N. labels: %s' %self.n_labels) #number of labels to predict
+            
         self.shuffle = shuffle
         self.on_epoch_end()
         #print('Batch size: %s' %self.batch_size)
@@ -175,10 +182,10 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.fine_tune:
             if self.batch_size%(self.n_classes*len(self.c_1)*self.n_noisy_samples):
                 print('batch_size,n_classes, len(c_1), n_noisy_samples= %s, %s, %s, %s '%(self.batch_size, self.n_classes, len(self.c_1), self.n_noisy_samples))
-                raise ValueError('batch size must be multiple of n_classes x len(c_1) x n_noisy_samples')
+                raise ValueError('batch size must be multiple of n_labels x len(c_1) x n_noisy_samples')
         else:
-            if self.batch_size%(self.n_classes*self.n_noisy_samples):
-                raise ValueError('batch size must be multiple of n_classes x n_noisy_samples')
+            if self.batch_size%(self.n_labels*self.n_noisy_samples):
+                raise ValueError('batch size must be multiple of n_labels x n_noisy_samples')
           
         if not self.fine_tune:
             if self.batch_size%(self.n_classes*self.n_noisy_samples)!=0:
@@ -190,47 +197,44 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             if self.batch_size%(self.n_classes*self.n_noisy_samples)!=0:
                 print('Batch size = %s' %self.batch_size)
                 #print('( n_labels x n_noisy_samples) = %s' %(self.n_classes*self.n_noisy_samples))
-                raise ValueError('Batch size must be multiple of 2*(number of classes in non-lcdm) x (n_noisy_samples) ')
+                raise ValueError('Batch size must be multiple of (number of classes ) x (n_noisy_samples) ')
             self.n_indexes = self.batch_size//(self.n_classes*self.n_noisy_samples)
-            print('batch_size, c_1, n_noisy_samples= %s,%s,%s' %(self.batch_size, len(self.c_1), self.n_noisy_samples))
-            print('n_indexes=%s' %self.n_indexes)
+            print('batch_size, n_classes, n_noisy_samples= %s,%s,%s' %(self.batch_size, self.n_classes, self.n_noisy_samples))
+            print('n_indexes=batch_size//(n_classes*n_noisy_samples)=%s' %self.n_indexes)
             #if self.n_indexes<=len(self.c_0)+len(self.c_1):
             #    print('n_indexes=%s' %self.n_indexes)
             #    print('class 0 labels=%s' %len(self.c_0))
             #    print('class 1 labels=%s' %len(self.c_1))
             #    raise ValueError('Should have an index for each label in non_lcdm ') 
-        
         self.n_batches = len(list_IDs)//(self.n_indexes)
+        print('list_IDs length: %s' %len(list_IDs))
+        print('n_indexes (n of file IDs read for each batch): %s' %self.n_indexes)
+        print('batch size: %s' %self.batch_size)
+        print('n_batches : %s' %self.n_batches)
         if self.n_batches==0:
-          print('list_IDs length: %s' %len(list_IDs))
-          print('n_indexes: %s' %self.n_indexes)
-          print('batch size: %s' %self.batch_size)
-          print('n_batches : %s' %self.n_batches)
-          raise ValueError('Not enough examples to support this batch size ')
-        print('For each batch we read %s file IDs' %self.n_indexes)
+            raise ValueError('Not enough examples to support this batch size ')
+   
+        #print('For each batch we read %s file IDs' %self.n_indexes)
         if not self.fine_tune:
-            print('For each file ID we have %s labels' %self.n_classes)
+            print('For each file ID we have %s labels' %(self.n_classes ))
         else:
             print('We read %s IDs for label %s and 1 ID for each of the labels %s' %(str(len(self.c_1)), c_0[0],str( c_1)) )
         if self.add_noise:
           print('For each ID, label we have %s realizations of noise' %self.n_noisy_samples)
          
-        if not self.fine_tune:
-            n_ex = self.n_indexes*self.n_classes*self.n_noisy_samples
-            n_check = self.n_classes*self.n_noisy_samples
-        else:
-            n_ex = self.n_indexes*self.n_classes*self.n_noisy_samples
-            n_check = self.n_classes*self.n_noisy_samples
+
+        n_ex = self.n_indexes*self.n_classes*self.n_noisy_samples
+        n_check = self.n_classes*self.n_noisy_samples 
         print('In total, for each batch we have %s training examples' %(n_ex))
         print('Input batch size: %s' %self.batch_size)
         print('N of batches to cover all file IDs: %s' %self.n_batches)
-        
         
         if self.n_indexes%(self.batch_size/(n_check))!=0:
           print('Batch size = %s' %self.batch_size)
           print('( n_labels x n_noisy_samples) = %s' %(n_check*self.n_noisy_samples))
           print('n_indexes = %s' %self.n_indexes)
           raise ValueError('Batch size should satisfy  m x Batch size /( n_labels x n_noisy_samples) =  n_indexes  with m a positive integer ')
+        
         
         if self.n_indexes!=len(list_IDs)/self.n_batches: 
           #print('Batch size = %s' %self.batch_size)
@@ -301,8 +305,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.Verbose:
             print('Dim of X: %s' %str(X.shape))
         # Generate data
-        if self.Verbose:
-            print('len of list IDs: %s ' %(len(list_IDs_temp)))
+        #if self.Verbose:
+        print('len of list IDs: %s ' %(len(list_IDs_temp)))
         if not self.fine_tune:
             fname_list=[]
             for l in self.labels:
@@ -316,11 +320,10 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             fname_list = get_fname_list(self.c_0, self.c_1, list_IDs_temp, self.data_root)
         if self.fine_tune and self.Verbose :
             print(fname_list)
-        
-        #print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size, self.n_noisy_samples))
+            
+        print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size, self.n_noisy_samples))
         assert len(fname_list)==self.batch_size//(self.n_noisy_samples)
         #print('N. of files used: %s' %fname_list.shape[0])
-        #print('n_classes: %s' %self.n_classes)
         #print('n_noisy_samples: %s' %self.n_noisy_samples)
         #print(self.batch_size//(self.n_noisy_samples))        
         #print(fname_list)

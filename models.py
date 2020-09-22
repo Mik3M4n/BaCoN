@@ -146,7 +146,6 @@ def make_fine_tuning_model(base_model, n_out_labels, dense_dim=32,
                            bayesian=True, trainable=True, drop=0.5, BatchNorm=True):
 
     model = tf.keras.models.Sequential()
-
     for layer in base_model.layers[:-1]: # go through until ith layer
         model.add(layer)
 
@@ -167,9 +166,15 @@ def make_fine_tuning_model(base_model, n_out_labels, dense_dim=32,
     else:
         outL = tf.keras.layers.Dense(n_out_labels)
     model.add(outL)
-
+    
+    if dense_dim>0:
+        fine_tune_at=-2
+    else:
+         fine_tune_at=-1
+    for layer in model.layers[:fine_tune_at]:
+        layer.trainable = trainable
+    
     return model
-
 
 
 
