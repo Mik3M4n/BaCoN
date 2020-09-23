@@ -203,6 +203,7 @@ def main():
     parser.add_argument("--fine_tune", default=False, type=str2bool, required=False)
     parser.add_argument("--c_0", nargs='+', default=['lcdm'], required=False)
     parser.add_argument("--c_1", nargs='+', default=['fR', 'dgp', 'wcdm', 'rand'], required=False)
+    parser.add_argument("--fine_tune_dataset_balanced", default=True, type=str2bool, required=False)
     
     
     parser.add_argument("--log_path", default='', type=str, required=False)
@@ -286,6 +287,8 @@ def main():
     FLAGS.strides_pooling = [int(z) for z in FLAGS.strides_pooling]
     FLAGS.c_1.sort()
     FLAGS.c_0.sort()
+                  
+        
     
     
     if FLAGS.fine_tune:
@@ -300,7 +303,8 @@ def main():
             # fine tuning 1vs 1
             fine_tune_dict={ label:label for label in FLAGS.c_1}
             ft_ckpt_name = '_'+('-').join(FLAGS.c_1)+'vs'+('-').join(FLAGS.c_0)
-        
+        if not FLAGS.fine_tune_dataset_balanced:
+            ft_ckpt_name += '_unbalanced'
         
         
         FLAGS.fine_tune_dict = fine_tune_dict
@@ -448,7 +452,7 @@ def main():
         else:
             dense_dim=0
         
-        model = make_fine_tuning_model(base_model=model, n_out_labels=training_generator.n_classes,
+        model = make_fine_tuning_model(base_model=model, n_out_labels=training_generator.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, trainable=FLAGS.trainable, drop=drop,  BatchNorm=FLAGS.BatchNorm)
         model.build(input_shape=input_shape)
         print(model.summary())

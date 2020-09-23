@@ -74,6 +74,8 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_O
             ft_ckpt_name = '_'+('-').join(FLAGS.c_1)+'vs'+('-').join(FLAGS.c_0)
         else:
             ft_ckpt_name=''
+        if not FLAGS.fine_tune_dataset_balanced:
+            ft_ckpt_name += '_unbalanced'
             
         model = make_fine_tuning_model(base_model=model, n_out_labels=n_classes,
                                        dense_dim= dense_dim, bayesian=FLAGS.bayesian, trainable=False, drop=0, BatchNorm=FLAGS.BatchNorm )
@@ -390,7 +392,7 @@ def main():
     print('Input shape %s' %str(input_shape))
     
              
-    model_loaded =  load_model_for_test(FLAGS, input_shape, n_classes=test_generator.n_classes,
+    model_loaded =  load_model_for_test(FLAGS, input_shape, n_classes=test_generator.n_classes_out,
                                         generator=test_generator)
     
    #test_generator[1]

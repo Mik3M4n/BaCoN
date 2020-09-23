@@ -1,8 +1,7 @@
-# Seeking New Physics in Cosmology with Bayesian Neural Networks I: Dark Energy and Modified Gravity
-
+# BaCoN (BAyesian COsmological Network)
 This package allows to train and test a Bayesian Convolutional Neural Network in order to classify matter power spectra as being representative of different cosmologies. The base model is trained on five different categories: LCDM, wCDM, f(R), DGP, and a randomly generated spectrum (see the paper for details). Additional cosmologies can be easily added (see the dedicated section). On top of this 5-labels classifiers, a fine-tuning procedure is available in order to classify a power spectrum as belonging to the LCDM class or not. This is useful in the search for new physics, irrespectively of the underlying alternative model. The fine-tuning starts from a model pre-trained on the 5 labels task, replacing the final, 5-dimensional output with a two dimensional output layer.
 
-**When making use of this package, please cite [this paper]() and the present git repository.**
+**When making use of this package, please cite the paper [Seeking New Physics in Cosmology with Bayesian Neural Networks I: Dark Energy and Modified Gravity]() and the present git repository.**
 
 
 ## Overview and code organisation

@@ -14,23 +14,33 @@ import argparse
 
 
 
-def get_fname_list(c_0, c_1, list_IDs_temp, data_root):
+def get_fname_list(c_0, c_1, list_IDs_temp, data_root, list_IDs_temp_dict, fine_tune_dataset_balanced=True):
     
     # np.array([self.data_root + '/'+l+ '/'+ str(ID) + '.txt' for ID in list_IDs_temp for l in self.labels])
+    if fine_tune_dataset_balanced:
+        fnames_c0 = np.array([ data_root+'/'+c_0[0]+'/'+str(ID)+'.txt' for ID in list_IDs_temp ])
     
-    fnames_c0 = np.array([ data_root+'/'+c_0[0]+'/'+str(ID)+'.txt' for ID in list_IDs_temp ])
-    
-    fnames_c1 = []
-    n_loops=len(list_IDs_temp)//len(c_1)
-    print('get_fname_list n_loops: %s' %n_loops)
-    for k in range(n_loops):
-        p  = np.random.permutation(list_IDs_temp[k*len(c_1):(k+1)*len(c_1)])
-        for i, l in enumerate(c_1):
-            fname = data_root+'/'+l+'/'+str(p[i])+'.txt'
-            #print(fname)
-            fnames_c1.append(fname)
-    fnames_c1 = np.array(fnames_c1)
-    fname_list = np.concatenate([fnames_c0,fnames_c1])
+        fnames_c1 = []
+        n_loops=len(list_IDs_temp)//len(c_1)
+        #print('get_fname_list len(list_IDs_temp): %s' %len(list_IDs_temp))
+        #print('get_fname_list n_loops: %s' %n_loops)
+        for k in range(n_loops):
+            p  = np.random.permutation(list_IDs_temp[k*len(c_1):(k+1)*len(c_1)])
+            for i, l in enumerate(c_1):
+                fname = data_root+'/'+l+'/'+str(p[i])+'.txt'
+                #print(fname)
+                fnames_c1.append(fname)
+        fnames_c1 = np.array(fnames_c1)
+        fname_list = np.concatenate([fnames_c0,fnames_c1])
+    else:
+        #print('get_fname_list non balanced case')
+        fname_list=[]
+        all_labels=c_0+c_1
+        for l in all_labels:
+            for ID in list_IDs_temp: #list_IDs_temp_dict[l]:
+                t_st =  data_root + '/'+l+ '/'+ str(ID) + '.txt' 
+                fname_list.append(t_st)
+        fname_list = np.array(fname_list)
     
     return fname_list
 
@@ -133,7 +143,7 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False):
   if n_keep<a or not((n_keep/n_labels/n_noise).is_integer()):   
     if Verbose:
       print('Sampling')
-    idxs_new = np.random.choice(indexes, int(n_keep), replace=False)
+    idxs_new = np.random.choice(indexes, int(a), replace=False)
   else:   
     if Verbose:
       print('Not sampling')
@@ -143,10 +153,11 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False):
     print('New length: %s' %idxs_new.shape[0])
     print('idxs_new.shape0 mod  bs/ n_labels x n_noise : %s' %check_val )
     print('len(idxs_new)/n_noise=%s'%(idxs_new.shape[0]/n_noise))
-  if check_val!=0 or not((idxs_new.shape[0]/n_noise).is_integer()) : #(n_labels*n_noise)%idxs_new.shape[0] !=0:
+  #if not ((idxs_new.shape[0]/(n_labels*n_noise)).is_integer()) or not check_val!=0:
+  if check_val!=0 or not((idxs_new.shape[0]/n_noise).is_integer()) or not((idxs_new.shape[0]/(n_labels*n_noise)).is_integer()): #(n_labels*n_noise)%idxs_new.shape[0] !=0:
     if Verbose:
       print('Recursive call')
-    return(cut_sample(np.random.choice(indexes, int(n_keep-1), replace=False), bs, n_labels=n_labels, n_noise=n_noise, Verbose=Verbose))
+    return(cut_sample(np.random.choice(indexes, int(a-1), replace=False), bs, n_labels=n_labels, n_noise=n_noise, Verbose=Verbose))
 
   return np.unique(idxs_new)
   
@@ -289,10 +300,17 @@ def get_flags(log_path):
     print('\n -------- Loaded parameters:')
     for key,value in FLAGS.items():
         print (key,value)
-  
+    
+    try:
+        fine_tune_dataset_balanced=FLAGS['fine_tune_dataset_balanced']
+    except KeyError:
+        print(' ####  FLAGS.fine_tune_dataset_balanced not found! #### \n Probably loading an older model. Using fine_tune_dataset_balanced=True')
+        FLAGS['fine_tune_dataset_balanced']=True
+    
     FLAGS_DH = DummyFlags(FLAGS)
   
     return FLAGS_DH
+
 
 
 def get_all_indexes(FLAGS, Test=False):
@@ -335,7 +353,7 @@ def get_all_indexes(FLAGS, Test=False):
             dir_name=data_dir+'/'+l
         else:
             dir_name=data_dir+'/'+l #+'_test'
-        n_samples = len([name for name in os.listdir(dir_name) if os.path.isfile(os.path.join(dir_name, name))]) 
+        n_samples = len([name for name in os.listdir(dir_name) if ( os.path.isfile(os.path.join(dir_name, name)) and 'DS_Store' not in name)]) 
         print('%s - %s training examples' %(l,n_samples))
         n_s.append(n_samples)
 
@@ -355,7 +373,7 @@ def get_all_indexes(FLAGS, Test=False):
     if FLAGS.test_mode and not Test:
         print('Choice with seed %s ' %FLAGS.seed)
         np.random.seed(FLAGS.seed)
-        if FLAGS.fine_tune:
+        if FLAGS.fine_tune and FLAGS.fine_tune_dataset_balanced:
             my_size = 2*len(FLAGS.c_1)
         else:
             my_size = FLAGS.n_test_idx
@@ -370,7 +388,7 @@ def get_all_indexes(FLAGS, Test=False):
 
         
     print('get_all_indexes labels dict: %s' %str(labels_dict)) 
-    return all_index, n_samples, val_size, n_labels, labels, labels_dict
+    return all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels
 
 
 
