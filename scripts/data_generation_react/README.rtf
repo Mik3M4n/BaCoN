@@ -1,0 +1,32 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1561\cocoasubrtf600
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\froman\fcharset0 Times-Roman;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue233;}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c93333;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 # Scripts used to generate data with ReACT ({\field{\*\fldinst{HYPERLINK "https://github.com/nebblu/ReACT"}}{\fldrslt 
+\f1 \cf2 \expnd0\expndtw0\kerning0
+\ul \ulc2 https://github.com/nebblu/ReACT}}) \
+\
+\
+1) Place all the files in the reactions/examples  folder, except copter.ini_template, which should go in reactions/examples/transfers. \
+\
+2) Modify the configuration.dat file to include your camp and react directories as well as the redshifts, k-bins and k-ranges you want to output at. K-modes are sampled logarithmically. Redshifts should be specified in descending order. \
+\
+3) Generate a cosmology/gravity parameter file with param_generation.nb, or just create your own file with the format: \
+\
+Index Omega_m Omega_b H0 n_s  sigma_8* param1 param2 param3 \
+\
+Where param1-3 are the additional parameters of the model. Ex. Param1 = fr0 for f(R). These should correspond to the parametrisation included in reactions/src/SpecialFunctions.cpp. \
+\
+4) Run \
+\
+>./run_react.sh \
+\
+\
+Note on sigma_8. The value specified in the myfile.txt is not the true sigma 8 but a rescaling. You can find the LCDM value of sigma8 by:   \
+\
+> sigma_8(camb) / sigma_8* x sigma_8(camb) \
+\
+Where sigma_8(camb) is the value produced by camb.  }

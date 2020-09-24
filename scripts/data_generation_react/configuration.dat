@@ -1,0 +1,8 @@
+redshifts = {1.5,0.785,0.478,0.1}
+kmin = 0.01
+kmax = 10.
+Nk = 500
+tkfile = train
+cambdir = /Users/bbose/Downloads/camb
+reactdir = /Users/bbose/Desktop/ML+ReACT/reactions
+
