@@ -1,0 +1,141 @@
+#include <cerrno>
+#include <cstdio>
+#include <cstdlib>
+#include <sys/stat.h>
+#include <cmath>
+
+
+#include <vector>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <time.h>
+#include <cmath>
+
+#include <omp.h>
+
+#include <Copter/HALO.h>
+#include <Copter/Cosmology.h>
+#include <Copter/LinearPS.h>
+#include <Copter/SpecialFunctions.h>
+#include <Copter/SPT.h>
+#include <Copter/Spline.h>
+
+using namespace std;
+
+
+/* Example code to output the halo model powerspectrum for modified gravity */
+
+int main(int argc, char* argv[]) {
+
+    //output file name
+     const char* output =
+
+     const char* cstr =
+
+     // Keep it z=0 to keep Copter's Growth @ 1
+     real z = 0;
+     // Relative error in magnitude integrations
+     real epsrel = 1e-2;
+
+     Cosmology C(cstr);
+     LinearPS P_l(C, z);
+     HALO halo(C, P_l, epsrel);
+     SPT spt(C, P_l, epsrel);
+     IOW iow;
+
+     /* Open output file */
+     FILE* fp = fopen(output, "w");
+
+     // define redshifts
+    const int Nz = 4;
+    double redshifts[Nz] =
+
+    // compute spt splines over redshifts at k0
+    double ploopr[Nz],ploopp[Nz];
+    Spline mysr,mysp;
+    double k0 = 0.06;
+
+    // 0: scale factor, 1: omega_total, 2-4: mg param (1e-10 ~ GR for default mg functions ), 5: number of points in halo-mass loop in scol_init , 30 works well.
+    double vars[6];
+    vars[0]=1.;
+    vars[1] =
+    vars[2] =
+    vars[3] =
+    vars[4] =
+    vars[5] = 30.;
+
+
+    iow.initnorm(vars);
+
+    for(int i=0; i<Nz; i++){
+    ploopr[i] = 0.;
+    ploopp[i] = 0.;
+    }
+
+	spt.ploop_init(ploopr,ploopp, redshifts , Nz, vars, k0);
+
+  double myscalef[Nz];
+  for(int i = 0; i<Nz ; i++){
+  myscalef[i]= 1./(1.+redshifts[i]);
+  }
+
+  mysr = CubicSpline(Nz, myscalef, ploopr);
+  mysp = CubicSpline(Nz, myscalef, ploopp);
+
+
+
+// Compute NL real spectrum at all redshifts and k
+//#pragma omp parallel for
+int Nk =
+double kmin =
+double kmax =
+
+double pnl[(Nk-1)*(Nz)+Nz],k2val[Nk];
+Spline myreact;
+
+
+for(int j = 0; j<Nz; j++){
+
+  vars[0] = 1./(1.+redshifts[j]);
+
+
+iow.initnorm(vars);
+/// initialise delta_c(M), a_vir(M), delta_avir(M) and v(M)
+halo.scol_init(vars);
+halo.scol_initp(vars);
+halo.react_init2(vars,mysr,mysp);
+halo.phinit_pseudo(vars);
+
+for(int i =0; i < Nk;  i ++) {
+    // 1.01 is put so that spline covers full range of input k values
+    k2val[i] = kmin * exp(i*log(kmax/kmin)/(Nk-1));
+    if(k2val[i]<0.01){
+      pnl[i*(Nz)+j] = halo.PHALO_pseudo(k2val[i]);
+    }
+    else{
+      pnl[i*(Nz)+j] = halo.reaction(k2val[i], vars) * halo.PHALO_pseudo(k2val[i]);
+     }
+   }
+
+}
+
+    double p1,p2,p3,p4,p5,p6;
+// Output to file
+ for(int i =0; i < Nk;  i ++) {
+
+      p1 =  k2val[i];
+      p2 = pnl[i*(Nz)+0];
+      p3 = pnl[i*(Nz)+1];
+      p4 = pnl[i*(Nz)+2];
+      p5 = pnl[i*(Nz)+3];
+
+     fprintf(fp,"%e %e %e %e %e  \n", p1, p2, p3, p4, p5); // print to file
+
+}
+
+	/*close output file*/
+    fclose(fp);
+    return 0;
+}
