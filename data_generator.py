@@ -49,18 +49,19 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                   add_noise=True, n_noisy_samples = 1, 
                   add_shot=True, add_sys=True,sigma_sys=15,
                   fine_tune = False, 
-                  c_0=None, c_1=None, fine_tune_dict=None, 
+                  c_0=None, c_1=None, group_lab_dict=None, 
                   z_bins=[0, 1, 2, 3], swap_axes=False,
-                  fine_tune_dataset_balanced=True
+                  dataset_balanced=True, test_mode=False,one_vs_all=False,
                  ):
       
-        print('\n Data Generator Initialization')
-
-        self.fine_tune_dataset_balanced=fine_tune_dataset_balanced
+        print('Data Generator Initialization')
+        
+        self.one_vs_all=one_vs_all
+        self.dataset_balanced=dataset_balanced
         self.sigma_sys=sigma_sys
         self.add_shot=add_shot
         self.add_sys=add_sys
-        self.fine_tune_dict=fine_tune_dict
+        self.group_lab_dict=group_lab_dict
         self.fine_tune=fine_tune
         self.c_0=c_0
         self.c_1=c_1
@@ -142,17 +143,20 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             self.list_IDs_dict = {label:list_IDs for label in labels}
         
         
+        self.base_case_dataset = not((self.fine_tune and self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and self.dataset_balanced))
+        print('one_vs_all: %s' %str(self.one_vs_all))
+        print('dataset_balanced: %s' %str(self.dataset_balanced))
+        
+        
         self.n_classes_out = len(self.labels)
-        if self.fine_tune and self.fine_tune_dataset_balanced:
+        if not self.base_case_dataset:
             self.n_classes = 2*(len(self.c_1))
-        elif self.fine_tune and not self.fine_tune_dataset_balanced:
+        elif (self.fine_tune and not self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and not self.dataset_balanced):
             self.n_classes = len(self.c_1)+len(self.c_0)
         else:
+            # regular 5 labels case
             self.n_classes =len(self.labels)
-        #if self.fine_tune:
-        #   self.n_classes = len(self.c_1)*2 #number of labels to predict
-        #else:
-        #    self.n_classes = self.n_labels #number of different classes in the training set
+        
         
         print('N. classes: %s' %self.n_classes) 
         print('N. n_classes in output: %s' %self.n_classes_out) #number of labels to predict
@@ -182,21 +186,23 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         else:
           self.n_noisy_samples = n_noisy_samples
         
-        if self.fine_tune and self.fine_tune_dataset_balanced:
+        if not self.base_case_dataset:
             if self.batch_size%(self.n_classes*self.n_noisy_samples):
                 print('batch_size,n_classes, len(c_1), n_noisy_samples= %s, %s, %s, %s '%(self.batch_size, self.n_classes, len(self.c_1), self.n_noisy_samples))
                 raise ValueError('batch size must be multiple of n_classes x len(c_1) x n_noisy_samples')
-        else:
+        elif not(self.fine_tune and self.dataset_balanced) or not(not self.fine_tune and self.one_vs_all and self.dataset_balanced):
             if self.batch_size%(self.n_classes*self.n_noisy_samples):
                 raise ValueError('batch size must be multiple of n_classes x n_noisy_samples')
-          
-        if self.fine_tune and self.fine_tune_dataset_balanced:
+        else:
+            raise ValueError('check dataset_balanced and one_vs_all compatibility')
+            
+        if not self.base_case_dataset:
             if self.batch_size%(self.n_classes*self.n_noisy_samples)!=0:
                 print('Batch size = %s' %self.batch_size)
                 #print('( n_labels x n_noisy_samples) = %s' %(self.n_classes*self.n_noisy_samples))
                 raise ValueError('Batch size must be multiple of n_classes x len(c_1)  x (n_noisy_samples) ')
-            self.n_indexes = len(self.c_1)*self.batch_size//(self.n_classes*self.n_noisy_samples)
-            print('batch_size, n_classes, , len(self.c_1), n_noisy_samples= %s, %s, %s, %s' %(self.batch_size, self.n_classes, len(self.c_1), self.n_noisy_samples))
+            self.n_indexes = len(self.c_1)*self.batch_size//(self.n_classes*self.n_noisy_samples) #len(self.c_1)*
+            print('batch_size, n_classes, len(self.c_1), n_noisy_samples= %s, %s, %s, %s' %(self.batch_size, self.n_classes, len(self.c_1), self.n_noisy_samples))
             print('n_indexes=len(self.c_1)*batch_size//(n_classes*n_noisy_samples)=%s' %self.n_indexes)
             #if self.n_indexes<=len(self.c_0)+len(self.c_1):
             #    print('n_indexes=%s' %self.n_indexes)
@@ -220,22 +226,25 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             raise ValueError('Not enough examples to support this batch size ')
    
         print('For each batch we read %s file IDs' %self.n_indexes)
-        if not self.fine_tune or not self.fine_tune_dataset_balanced:
+        if not self.fine_tune or not self.dataset_balanced:
             print('For each file ID we have %s labels' %(self.n_classes ))
         else:
             print('We read %s IDs for label %s and 1 ID for each of the labels %s' %(str(len(self.c_1)), c_0[0],str( c_1)) )
         if self.add_noise:
           print('For each ID, label we have %s realizations of noise' %self.n_noisy_samples)
          
-        if not self.fine_tune or not self.fine_tune_dataset_balanced:
+        if self.base_case_dataset:
             n_ex = self.n_indexes*self.n_classes*self.n_noisy_samples
             n_check = self.n_classes*self.n_noisy_samples 
         else:
             n_ex = self.n_indexes*self.n_classes*self.n_noisy_samples/len(self.c_1)
             n_check = self.n_classes*self.n_noisy_samples#*len(self.c_1) # n_indexes must be a multiple of this x batch_size
+        
         print('In total, for each batch we have %s training examples' %(n_ex))
         print('Input batch size: %s' %self.batch_size)
         print('N of batches to cover all file IDs: %s' %self.n_batches)
+        if n_ex!=self.batch_size:
+            raise ValueError('Effective batch size does not match input batch size')
         
         if self.n_indexes%(self.batch_size/(n_check))!=0:
           print('Batch size = %s' %self.batch_size)
@@ -316,7 +325,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         # Generate data
         #if self.Verbose:
         #print('len of list IDs: %s ' %(len(list_IDs_temp)))
-        if not self.fine_tune :
+        if not self.fine_tune and not self.one_vs_all:
             fname_list=[]
             for l in self.labels:
                 for ID in list_IDs_temp_dict[l]:
@@ -327,7 +336,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         else:
             #print(list_IDs_temp)
             #print('__data_generation len(list_IDs_temp): %s' %len(list_IDs_temp))
-            fname_list = get_fname_list(self.c_0, self.c_1, list_IDs_temp, self.data_root,  list_IDs_temp_dict, fine_tune_dataset_balanced=self.fine_tune_dataset_balanced,)
+            fname_list = get_fname_list(self.c_0, self.c_1, list_IDs_temp, self.data_root,  list_IDs_temp_dict, dataset_balanced=self.dataset_balanced,)
         if self.fine_tune and self.Verbose :
             print(fname_list)
             
@@ -395,20 +404,21 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                                 
                 # Store class   
                 label = fname.split('/')[-2]
-                if not self.fine_tune:
+                
+                if not self.base_case_dataset:
+                    label = self.group_lab_dict[label]
+                    encoding = self.labels_dict[label]
+                elif (self.fine_tune and not self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and not self.dataset_balanced):
+                    label = self.group_lab_dict[label]
                     encoding = self.labels_dict[label]
                 else:
-                    label = self.fine_tune_dict[label]
+                    # regular 5 labels case
                     encoding = self.labels_dict[label]
-                   # print('Label for this example: %s' %label)
-                   # print('Encoding: %s' % encoding)
-                #if not self.fine_tune:
-                #    ind = (f_ind)%(self.n_classes)
-                #   assert label==self.inv_labels_dict[ind]
+                
                 
                 if self.Verbose:
-                  print('Label for this example: %s' %label)
-                  print('Encoding: %s' % encoding)
+                    print('Label for this example: %s' %label)
+                    print('Encoding: %s' % encoding)
                 
                 y[i_ind] = encoding
                 i_ind += 1
@@ -461,12 +471,28 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         #elif self.swap_axes:
         #    X = X[:,:,0,:]
                 
-        
+        #if self.test_mode:
+        #    X = tf.expand_dims(X, axis=0)
         return X, tf.keras.utils.to_categorical(y, num_classes=self.n_classes_out)
     
-    
-    
 
+
+
+def read_partition(FLAGS):
+    out_path = FLAGS.models_dir+FLAGS.fname
+    base_path = out_path+'/tf_ckpts/'
+    fname_idxs_train=base_path+'idxs_train.txt'
+    fname_idxs_val=base_path+'idxs_val.txt'
+    
+    print('Reading train indexes from %s ...' %fname_idxs_train)
+    train_idxs=np.array(np.loadtxt(fname_idxs_train).tolist()).astype(int)
+    print('Train indexes length: %s' %str(len(train_idxs)))
+    print('Reading val indexes from %s ...' %fname_idxs_val)
+    val_idxs=np.array(np.loadtxt(fname_idxs_val).tolist()).astype(int)
+    print('Val indexes length: %s' %str(len(val_idxs)))
+    
+    partition = {'train': train_idxs , 'validation': val_idxs }
+    return partition
     
     
 def create_generators(FLAGS):
@@ -477,16 +503,25 @@ def create_generators(FLAGS):
     
     # --------------------  CREATE DATA GENERATORS   --------------------
     
-    
     all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS)
     print('create_generators n_labels: %s' %n_labels) 
-    if FLAGS.fine_tune and FLAGS.fine_tune_dataset_balanced:
+    if (FLAGS.fine_tune or FLAGS.one_vs_all) and FLAGS.dataset_balanced:
+        # balanced dataset , 1/2 lcdm , 1/2 rest in FT or one vs all mode
+        case=1
         n_labels_eff = n_labels*len(FLAGS.c_1)
-    elif not FLAGS.fine_tune:
+        len_c1=len(FLAGS.c_1)
+    elif not (FLAGS.fine_tune or FLAGS.one_vs_all):
+        # regular case
+        case=2
         n_labels_eff=n_labels
-    elif FLAGS.fine_tune and not FLAGS.fine_tune_dataset_balanced:
+        len_c1=1
+    elif (FLAGS.fine_tune or FLAGS.one_vs_all) and not FLAGS.dataset_balanced:
+        #  Unbalanced dataset , 1/5 lcdm , 1/5 rest in FT or one vs all mode
+        case=3
         n_labels_eff = len(all_labels)
+        len_c1=1
     print('create_generators n_labels_eff: %s' %n_labels_eff)  
+    print('create_generators len_c1: %s' %len_c1)
         
         
 
@@ -515,25 +550,25 @@ def create_generators(FLAGS):
         n_noisy_samples = 1
     print('--create_generators, train indexes')
     if FLAGS.test_mode:
-        if not FLAGS.fine_tune:
+        if case==3:
             batch_size=train_index.shape[0]*n_labels_eff*n_noisy_samples
-        elif FLAGS.fine_tune_dataset_balanced:
+        elif case==2:
             batch_size=train_index.shape[0]*n_labels*n_noisy_samples
-        else:
+        elif case==1:
             batch_size=n_labels_eff*n_noisy_samples
     else:
         batch_size=FLAGS.batch_size
     print('batch_size: %s' %batch_size)
 
     if not FLAGS.test_mode:
-        train_index_1  = cut_sample(train_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=False)
+        train_index_1  = cut_sample(train_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=False, len_c1=len_c1)
         print('Train index length: %s' %train_index_1.shape[0])
     else:
         train_index_1 = train_index
         print('Train index: %s' %train_index_1)
     print('--create_generators, validation indexes')
     if not FLAGS.test_mode:
-        val_index_1  = cut_sample(val_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=False)
+        val_index_1  = cut_sample(val_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=False,len_c1=len_c1)
         print('Val index length: %s'  %val_index_1.shape[0])
     else:
         val_index_1 = val_index
@@ -544,7 +579,19 @@ def create_generators(FLAGS):
     assert val_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
     
     partition={'train': train_index_1, 'validation': val_index_1}
-  
+    
+    
+    if FLAGS.restore:
+        partition = read_partition(FLAGS)
+        batch_size=FLAGS.batch_size
+    #else:
+    #    partition, batch_size = make_partition(FLAGS)
+    
+    #if FLAGS.add_noise:
+    #    n_noisy_samples = FLAGS.n_noisy_samples
+    #else:
+    #    n_noisy_samples = 1
+        
     ###################
     # USE THE BLOCH BELOW TO BE COMPATIBLE WITH OLDER VERSIONS OF DARTA GENERATORS. EVENTUALLY REMOVE
     ###################
@@ -569,6 +616,8 @@ def create_generators(FLAGS):
         print(' ####  FLAGS.swap_axes not found! #### \n Probably loading an older model. Set swap_axes=%s' %str(swap_axes))
     ###################
     
+    
+    
     params = {'dim': (FLAGS.im_depth, FLAGS.im_width),
           'batch_size':batch_size, # should satisfy  m x Batch size /( n_labels x n_noisy_samples) =  n_indexes  with m a positive integer
           'n_channels': FLAGS.im_channels,
@@ -582,25 +631,26 @@ def create_generators(FLAGS):
           'k_max':FLAGS.k_max, 'i_max':FLAGS.i_max, 'sigma_sys':sigma_sys,
           'swap_axes':swap_axes,
           'z_bins':z_bins,
+          'test_mode':FLAGS.test_mode
           
           }
     
-    if FLAGS.fine_tune:
+    if FLAGS.fine_tune  or FLAGS.one_vs_all:
         params['c_0'] = FLAGS.c_0
         params['c_1'] = FLAGS.c_1
-        params['fine_tune_dict'] = FLAGS.fine_tune_dict
-        params['fine_tune_dataset_balanced']=FLAGS.fine_tune_dataset_balanced
+        params['group_lab_dict'] = FLAGS.group_lab_dict
+        params['dataset_balanced']=FLAGS.dataset_balanced
+        params['one_vs_all']=FLAGS.one_vs_all
         
     
     if not params['add_noise']:
         params['n_noisy_samples']=1
     
-    print('--DataGenerator Train')
+    print('\n--DataGenerator Train')
     training_generator = DataGenerator(partition['train'], labels, labels_dict, data_root = FLAGS.DIR, save_indexes=False, **params)
-    print('--DataGenerator Validation')
+    print('\n--DataGenerator Validation')
     validation_generator = DataGenerator(partition['validation'], labels, labels_dict, data_root = FLAGS.DIR,  save_indexes=False, **params)
 
-    
     
     return training_generator, validation_generator #, params
 
@@ -619,12 +669,15 @@ def create_test_generator(FLAGS):
     #else:
     #    n_labels_eff = n_labels
     
-    if FLAGS.fine_tune and FLAGS.fine_tune_dataset_balanced:
+    if FLAGS.fine_tune and FLAGS.dataset_balanced:
         n_labels_eff = n_labels*len(FLAGS.c_1)
+        len_c1=len(FLAGS.c_1)
     elif not FLAGS.fine_tune:
         n_labels_eff=n_labels
-    elif FLAGS.fine_tune and not FLAGS.fine_tune_dataset_balanced:
+        len_c1=1
+    elif FLAGS.fine_tune and not FLAGS.dataset_balanced:
         n_labels_eff = len(all_labels)
+        len_c1=1
         
     
     if FLAGS.add_noise:
@@ -641,7 +694,7 @@ def create_test_generator(FLAGS):
         batch_size=FLAGS.batch_size
     print('batch_size: %s' %batch_size)
         
-    test_index_1  = cut_sample(all_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=True)
+    test_index_1  = cut_sample(all_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=True, len_c1=len_c1)
     n_test = test_index_1.shape[0]
 
     assert test_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
@@ -668,11 +721,12 @@ def create_test_generator(FLAGS):
           'z_bins':FLAGS.z_bins,
           }
     
-    if FLAGS.fine_tune:
+    if FLAGS.fine_tune or FLAGS.one_vs_all:
         params_test['c_0'] = FLAGS.c_0
         params_test['c_1'] = FLAGS.c_1
-        params_test['fine_tune_dict'] = FLAGS.fine_tune_dict
-        params_test['fine_tune_dataset_balanced']=FLAGS.fine_tune_dataset_balanced
+        params_test['group_lab_dict'] = FLAGS.group_lab_dict
+        params_test['dataset_balanced']=FLAGS.dataset_balanced
+        params_test['one_vs_all']=FLAGS.one_vs_all
         
 
     if not params_test['add_noise']:

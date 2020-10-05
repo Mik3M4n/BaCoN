@@ -23,9 +23,17 @@ import time
 
 @tf.function
 def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=False, n_train_example=60000):
+    #print('train_on_batch call')
     with tf.GradientTape() as tape:
         tape.watch(model.trainable_variables) 
-        logits = model(x, training=True)
+        #logits = model(x, training=True)
+        for layer in model.layers:  # In order to support frozen weights
+            #print(x.shape)
+            #print(layer.name)
+            #print(layer.trainable)
+            x = layer(x, training=layer.trainable)
+            #print(x.shape)
+        logits=x
         if bayesian:
              kl = sum(model.losses)/n_train_example
              loss_value = loss(y, logits, kl)
@@ -74,14 +82,25 @@ def my_train(model, optimizer, loss,
              val_generator, manager, ckpt,            
              train_acc_metric, val_acc_metric,
              restore=False, patience=100,
-             bayesian=False, save_ckpt=False
+             bayesian=False, save_ckpt=False, decayed_lr_value=None,
               ):
   fname_hist = manager.directory+'/hist'
+  fname_idxs_train = manager.directory+'/idxs_train.txt'
+  fname_idxs_val = manager.directory+'/idxs_val.txt'
   if not restore:
       history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy':[] }
       best_loss=np.infty
       print("Initializing checkpoint from scratch.")
   else:
+      # this is to fix bug in restoring optimizer. See https://github.com/tensorflow/tensorflow/issues/33150
+      #print('Training on one batch to properly restore model....') 
+      #x, y = train_generator[0]
+      #_ = train_on_batch(x, y, model, optimizer, loss, train_acc_metric, 
+      #                  bayesian=bayesian, n_train_example=train_generator.batch_size*train_generator.n_batches)
+      #train_acc_metric.reset_states()
+      
+      #optimizer.iterations # this is to fix bug in restoring optimizer. See https://gist.github.com/yoshihikoueno/4ff0694339f88d579bb3d9b07e609122
+      print('Restoring ckpt...')
       ckpt.restore(manager.latest_checkpoint)
       print('ckpt step: %s' %ckpt.step)
       hist_start=int(ckpt.step)
@@ -90,14 +109,27 @@ def my_train(model, optimizer, loss,
                  'val_loss': np.loadtxt(fname_hist+'_val_loss.txt').tolist()[0:hist_start], 
                  'accuracy': np.loadtxt(fname_hist+'_accuracy.txt').tolist()[0:hist_start], 
                  'val_accuracy':np.loadtxt(fname_hist+'_val_accuracy.txt').tolist()[0:hist_start] }
-      print(history)
+      #print(history)
+      for key in history.keys():
+        fname = fname_hist+'_'+key+'.txt'
+        fname_new = fname_hist+'_'+key+'_original.txt'
+        os.rename(fname, fname_new)
+      print('Saved copy of original histories.')
       if manager.latest_checkpoint:
           print("Restoring checkpoint from {}".format(manager.latest_checkpoint))
-          
+          best_train_loss = history['loss'][-1]
           best_loss = history['val_loss'][-1]
-          print('Starting from best loss %.4f' %(best_loss))
+          print('Starting from  (loss, val_loss) =  %.4f, %.4f' %(best_train_loss, best_loss ))
       else:
           print("Checkpoint not found. Initializing checkpoint from scratch.")
+      
+      print('Last learning rate was %s' %ckpt.optimizer.learning_rate)
+      #if decayed_lr_value is not None:
+        #lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_generator), FLAGS.decay)
+      #  ckpt.optimizer.learning_rate = decayed_lr_value(hist_start) #FLAGS.lr
+      #  print('Learning rate set to %s' %ckpt.optimizer.learning_rate)
+      #else:
+      #    print('Re-starting from this value for the learing rate')
   
   n_val_example=val_generator.batch_size*val_generator.n_batches
   n_train_example=train_generator.batch_size*train_generator.n_batches
@@ -143,6 +175,9 @@ def my_train(model, optimizer, loss,
         if count==patience:
             print('Max patience reached. ')
             break
+    
+    
+    
     ckpt.step.assign_add(1)
 
     train_acc = train_acc_metric.result().numpy()
@@ -160,14 +195,30 @@ def my_train(model, optimizer, loss,
     #print(manager.directory)
     #+str(epoch)
     #with open(fname_hist, 'w') as fp:
-    for key in history.keys():
-        fname = fname_hist+'_'+key+'.txt'
-        with open(fname, 'a') as fh:
-            fh.write(str(history[key][-1])+'\n')           
+          
         #if epoch>0:
         #    os.remove(manager.directory+'/hist_'+str(epoch-1)+'_'+key+'.txt')
         #np.savetxt(fname_hist+'_'+key+'.txt', history[key])
+    if epoch==0:
+        if restore:          
+            for key in history.keys():
+                fname = fname_hist+'_'+key+'.txt'
+                with open(fname, 'a') as fh:
+                    for el in history[key][:-1]:
+                        fh.write(str(el) +'\n')
+            print('Re-wrote histories until epoch %s' %str(len(history['val_accuracy'][:-1])) )
+                    
+        with open(fname_idxs_train, 'a') as fit:
+            for ID in train_generator.list_IDs:
+                fit.write(str(ID) +'\n')
+        with open(fname_idxs_val, 'a') as fiv:
+            for ID in val_generator.list_IDs:   
+                fiv.write( str(ID) +'\n' )
     
+    for key in history.keys():
+            fname = fname_hist+'_'+key+'.txt'
+            with open(fname, 'a') as fh:
+                fh.write(str(history[key][-1])+'\n') 
     #epoch_bar.set_postfix(train_loss=loss_value.numpy(), val_loss=val_loss_value.numpy(), 
     #                      train_accuracy = train_acc.numpy(), val_accuracy=val_acc.numpy())
     #print("Time taken: %.2fs" % (time.time() - start_time))
@@ -201,9 +252,11 @@ def main():
     parser.add_argument("--seed", default=1312, type=int, required=False)
     
     parser.add_argument("--fine_tune", default=False, type=str2bool, required=False)
+    parser.add_argument("--one_vs_all", default=False, type=str2bool, required=False)
     parser.add_argument("--c_0", nargs='+', default=['lcdm'], required=False)
     parser.add_argument("--c_1", nargs='+', default=['fR', 'dgp', 'wcdm', 'rand'], required=False)
-    parser.add_argument("--fine_tune_dataset_balanced", default=True, type=str2bool, required=False)
+    parser.add_argument("--dataset_balanced", default=True, type=str2bool, required=False)
+    parser.add_argument("--include_last", default=True, type=str2bool, required=False)
     
     
     parser.add_argument("--log_path", default='', type=str, required=False)
@@ -219,6 +272,7 @@ def main():
     parser.add_argument("--TEST_DIR", default='data/test_data/new_test_data', type=str, required=False)  
     parser.add_argument("--models_dir", default='models/MM/', type=str, required=False)
     parser.add_argument("--save_ckpt", default=True, type=str2bool, required=False)
+    parser.add_argument("--out_path_overwrite", default=False, type=str2bool, required=False)
     
     
     # INPUT DATA DIMENSION
@@ -262,6 +316,7 @@ def main():
     
     parser.add_argument("--add_FT_dense", default=True, type=str2bool, required=False)
     parser.add_argument("--trainable", default=True, type=str2bool, required=False)
+    parser.add_argument("--unfreeze", default=False, type=str2bool, required=False)
     
     
     # PARAMETERS FOR TRAINING
@@ -288,33 +343,66 @@ def main():
     FLAGS.c_1.sort()
     FLAGS.c_0.sort()
                   
-        
-    
+    #if not FLAGS.fine_tune:
+    #    if not FLAGS.dataset_balanced and FLAGS.one_vs_all:
+    #        raise ValueError('dataset_balanced must be true in one vs all mode')
+        #if not FLAGS.one_vs_all and not FLAGS.dataset_balanced:
+        #    raise ValueError('when not in  one vs all mode, dataset_balanced must be true')
     
     if FLAGS.fine_tune:
         FLAGS_ORIGINAL = get_flags(FLAGS.log_path)
-        #FLAGS.c_0 = ['lcdm',]
-        #FLAGS.c_1 = ['fR', 'dgp', 'wcdm', 'rand']
-        #FLAGS.fine_tune_dict = {'lcdm': 'lcdm', 'fR':'non_lcdm', 'dgp': 'non_lcdm', 'wcdm':'non_lcdm', 'rand':'non_lcdm' }
         if len(FLAGS.c_1)>1:
-            ft_ckpt_name = ''
-            fine_tune_dict={ label:'non_lcdm' for label in FLAGS.c_1}
+            add_ckpt_name = ''
+            temp_dict={ label:'non_lcdm' for label in FLAGS.c_1}
+            if not FLAGS.one_vs_all:
+                raise ValueError('one vs all must be true when fine tuning against one label')
         else:
             # fine tuning 1vs 1
-            fine_tune_dict={ label:label for label in FLAGS.c_1}
-            ft_ckpt_name = '_'+('-').join(FLAGS.c_1)+'vs'+('-').join(FLAGS.c_0)
-        if not FLAGS.fine_tune_dataset_balanced:
-            ft_ckpt_name += '_unbalanced'
+            temp_dict={ label:label for label in FLAGS.c_1}
+            add_ckpt_name = '_'+('-').join(FLAGS.c_1)+'vs'+('-').join(FLAGS.c_0)
+        if not FLAGS.dataset_balanced:
+            add_ckpt_name += '_unbalanced'
+        else:
+            add_ckpt_name += '_balanced'
+        ft_ckpt_name_base_unfreezing=add_ckpt_name+'_frozen_weights'
+        if not FLAGS.trainable:
+            add_ckpt_name+='_frozen_weights'
+        else:
+            add_ckpt_name+='_all_weights'
         
+        if FLAGS.include_last:
+            add_ckpt_name+='_include_last'
+        else:
+            add_ckpt_name+='_without_last'
         
-        FLAGS.fine_tune_dict = fine_tune_dict
-        for i in range(len(FLAGS.c_0) ):
-          FLAGS.fine_tune_dict[FLAGS.c_0[i]]=FLAGS.c_0[i]
-        out_path = FLAGS_ORIGINAL.models_dir+FLAGS_ORIGINAL.fname
-        
+        if FLAGS.unfreeze:
+            add_ckpt_name+='_unfrozen'
+        #FLAGS.group_lab_dict = temp_dict
+        if not FLAGS.out_path_overwrite:
+            out_path = FLAGS_ORIGINAL.models_dir+FLAGS_ORIGINAL.fname
+        else:
+            out_path = FLAGS.models_dir+FLAGS.fname
+            
+    elif FLAGS.one_vs_all:
+        if len(FLAGS.c_1)>1:
+            add_ckpt_name = ''
+            temp_dict={ label:'non_lcdm' for label in FLAGS.c_1}
+        else:
+            # training tuning 1vs 1
+            temp_dict={ label:label for label in FLAGS.c_1}
+            add_ckpt_name = '_'+('-').join(FLAGS.c_1)+'vs'+('-').join(FLAGS.c_0)
+        out_path = FLAGS.models_dir+FLAGS.fname
     else:
         out_path = FLAGS.models_dir+FLAGS.fname
-      
+    
+    
+    if FLAGS.one_vs_all or FLAGS.fine_tune: 
+        FLAGS.group_lab_dict = temp_dict
+        for i in range(len(FLAGS.c_0) ):
+            FLAGS.group_lab_dict[FLAGS.c_0[i]]=FLAGS.c_0[i]
+        
+        
+    
     if FLAGS.test_mode and not FLAGS.fine_tune:
         out_path=out_path+'_test'
         
@@ -347,11 +435,11 @@ def main():
     if FLAGS.fine_tune:
         print('\n------------ CREATING ORIGINAL DATA GENERATORS FOR CHECK------------')
         or_training_generator, or_validation_generator = create_generators(FLAGS_ORIGINAL)
-        n_classes = or_training_generator.n_classes # in order to build correctly original model
+        n_classes = or_training_generator.n_classes_out # in order to build correctly original model
         model_name = FLAGS_ORIGINAL.model_name
         bayesian=FLAGS_ORIGINAL.bayesian
     else:
-        n_classes = training_generator.n_classes
+        n_classes = training_generator.n_classes_out
         model_name = FLAGS.model_name
         bayesian = FLAGS.bayesian
     
@@ -422,8 +510,18 @@ def main():
     else:
         optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
     
+    if FLAGS.restore and FLAGS.decay is not None:
+        decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / len(training_generator))
         
-    ckpts_path = out_path+'/tf_ckpts/'
+    #optimizer.iterations  # this access will invoke optimizer._iterations method and create optimizer.iter attribute
+    #if FLAGS.decay is not None:
+    #    optimizer.decay = tf.Variable(tf.Variable(FLAGS.decay))
+    
+    
+    if not FLAGS.unfreeze:
+        ckpts_path = out_path+'/tf_ckpts/'
+    else:
+        ckpts_path=out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name_base_unfreezing+'/'
     ckpt_name = 'ckpt'
     ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model) 
     
@@ -432,14 +530,16 @@ def main():
         latest = tf.train.latest_checkpoint(ckpts_path)
         print('Loading ckpt %s' %latest)
         if not FLAGS.test_mode:
-            ckpts_path = out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name+'/'
+            ckpts_path = out_path+'/tf_ckpts_fine_tuning'+add_ckpt_name+'/'
         else:
-            ckpts_path = out_path+'/tf_ckpts_fine_tuning_test'+ft_ckpt_name+'/'
-        ckpt_name = ckpt_name+'_fine_tuning'+ft_ckpt_name
+            ckpts_path = out_path+'/tf_ckpts_fine_tuning_test'+add_ckpt_name+'/'
+        ckpt_name = ckpt_name+'_fine_tuning'+add_ckpt_name
         if FLAGS.test_mode:
             ckpt_name+='_test'
         ckpt.restore(latest)
+        print('Last learning rate was %s' %ckpt.optimizer.learning_rate)
         ckpt.optimizer.learning_rate = FLAGS.lr
+        print('Learning rate set to %s' %ckpt.optimizer.learning_rate)
         
         loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian)
         print('Loss after loading weights/ %s\n' %loss_1.numpy())
@@ -452,13 +552,32 @@ def main():
         else:
             dense_dim=0
         
-        model = make_fine_tuning_model(base_model=model, n_out_labels=training_generator.n_classes_out,
-                                       dense_dim= dense_dim, bayesian=bayesian, trainable=FLAGS.trainable, drop=drop,  BatchNorm=FLAGS.BatchNorm)
+        if not FLAGS.unfreeze:
+            model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
+                                       n_out_labels=training_generator.n_classes_out,
+                                       dense_dim= dense_dim, bayesian=bayesian, 
+                                       trainable=FLAGS.trainable, 
+                                       drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
+        else:
+            model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
+                                       n_out_labels=training_generator.n_classes_out,
+                                       dense_dim= dense_dim, bayesian=bayesian, 
+                                       drop=drop,  BatchNorm=FLAGS.BatchNorm)
+            
         model.build(input_shape=input_shape)
         print(model.summary())
     
         ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)     
-    
+    elif FLAGS.one_vs_all:
+        if not FLAGS.test_mode:
+            ckpts_path = out_path+'/tf_ckpts'+add_ckpt_name+'/'
+        else:
+            ckpts_path = out_path+'/tf_ckpts_test'+add_ckpt_name+'/'
+        ckpt_name = ckpt_name+add_ckpt_name
+        if FLAGS.test_mode:
+            ckpt_name+='_test'
+        
+        
     manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
                                          max_to_keep=2, 
                                          checkpoint_name=ckpt_name)
@@ -481,7 +600,8 @@ def main():
         loss=ELBO
     else:
         loss=my_loss
-        
+    
+    
     #print('Model n_classes : %s ' %n_classes)
     print('Features shape: %s' %str(training_generator[0][0].shape))
     print('Labels shape: %s' %str(training_generator[0][1].shape))   
@@ -491,14 +611,14 @@ def main():
              validation_generator, manager, ckpt,
              train_acc_metric, val_acc_metric,
              patience=FLAGS.patience, restore=FLAGS.restore, 
-             bayesian=bayesian, save_ckpt=FLAGS.save_ckpt #not(FLAGS.test_mode)
+             bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None #not(FLAGS.test_mode)
 )
     hist_path =  out_path+'/hist.png'
     if FLAGS.fine_tune:
         if FLAGS.test_mode:
-            hist_path = out_path +'/hist_fine_tuning'+ft_ckpt_name+'_test.png'
+            hist_path = out_path +'/hist_fine_tuning'+add_ckpt_name+'_test.png'
         else:
-            hist_path = out_path +'/hist_fine_tuning'+ft_ckpt_name+'.png'  
+            hist_path = out_path +'/hist_fine_tuning'+add_ckpt_name+'.png'  
     
     plot_hist(DummyHist(history), epochs=len(history['loss']), save=True, path=hist_path, show=False)
     

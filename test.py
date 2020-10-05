@@ -19,9 +19,8 @@ from utils import DummyHist, plot_hist, str2bool, get_flags
 
 from train import ELBO, my_loss
 
-ft_ver= ''
 
-def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_ORIGINAL=None):
+def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_ORIGINAL=None, new_fname=None):
     
      
     #print('\n -------- Parameters:')
@@ -74,11 +73,25 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_O
             ft_ckpt_name = '_'+('-').join(FLAGS.c_1)+'vs'+('-').join(FLAGS.c_0)
         else:
             ft_ckpt_name=''
-        if not FLAGS.fine_tune_dataset_balanced:
+        if not FLAGS.dataset_balanced:
             ft_ckpt_name += '_unbalanced'
+        else:
+            ft_ckpt_name += '_balanced'
+        if not FLAGS.trainable:
+            ft_ckpt_name+='_frozen_weights'
+        else:
+            ft_ckpt_name+='_all_weights'
+        if FLAGS.include_last:
+            ft_ckpt_name+='_include_last'
+        else:
+            ft_ckpt_name+='_without_last'
+        if FLAGS.unfreeze:
+            ft_ckpt_name+='_unfrozen'
+        
             
-        model = make_fine_tuning_model(base_model=model, n_out_labels=n_classes,
-                                       dense_dim= dense_dim, bayesian=FLAGS.bayesian, trainable=False, drop=0, BatchNorm=FLAGS.BatchNorm )
+        model = make_fine_tuning_model(base_model=model, input_shape=input_shape, n_out_labels=generator.n_classes_out,
+                                       dense_dim= dense_dim, bayesian=FLAGS.bayesian, trainable=False, drop=0, BatchNorm=FLAGS.BatchNorm,
+                                       include_last=FLAGS.include_last)
         model.build(input_shape=input_shape)
     print(model.summary())
     
@@ -89,16 +102,17 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_O
             
     
     print('------------ RESTORING CHECKPOINT ------------\n')
-    out_path = FLAGS.models_dir+FLAGS.fname
+    if new_fname is None:
+        out_path = FLAGS.models_dir+FLAGS.fname
+    else:
+        out_path = FLAGS.models_dir+new_fname
     optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
     ckpts_path = out_path
-    if ft_ver!='':
-        ckpts_path +='/other_FT'
     ckpts_path+='/tf_ckpts'
     #ckpt_name = 'ckpt'
     if FLAGS.fine_tune:
         ckpts_path += '_fine_tuning'+ft_ckpt_name
-    ckpts_path+=ft_ver+'/'
+    ckpts_path+='/'
     print('Looking for ckpt in ' + ckpts_path)
     ckpt = tf.train.Checkpoint(optimizer=optimizer, net=model)
     
@@ -136,7 +150,7 @@ def compute_loss(generator, model, bayesian=False):
   
 
 
-def print_cm(cm, names, out_path, fine_tune=False):
+def print_cm(cm, names, out_path, FLAGS):
     import pandas as pd
     import matplotlib.pyplot as plt
     plt.rcParams["font.family"] = 'serif'
@@ -166,8 +180,11 @@ def print_cm(cm, names, out_path, fine_tune=False):
     
     #plt.show()
     cm_path = out_path+'/cm'
-    if fine_tune:
-        cm_path+='_FT'+ft_ver
+    if FLAGS.fine_tune:
+        cm_path+='_FT'
+    if not FLAGS.trainable:
+        cm_path+='_frozen_weights'
+        
     cm_path+='.png'
     plt.savefig(cm_path)
     print('Saved confusion matrix at %s' %cm_path)
@@ -196,7 +213,7 @@ def evaluate_accuracy(model, test_generator, out_path, names=None, FLAGS=None):
     #### CONFUSION MATRIX
     from sklearn.metrics import confusion_matrix
     cm = confusion_matrix(tf.concat(y_true_tot,axis=0),tf.concat(y_pred_tot,axis=0))
-    _ = print_cm(cm, names, out_path, fine_tune=FLAGS.fine_tune)
+    _ = print_cm(cm, names, out_path, FLAGS)
     
     
     return tot_acc
@@ -220,12 +237,12 @@ def predict_mean_proba(X, model, num_monte_carlo=100):
         return mean_proba, sampled_probas
 
 
-def predict(X, model, num_monte_carlo=100, th_prob=0.5):
+def my_predict(X, model, num_monte_carlo=100, th_prob=0.5):
 
   print('using th_prob=%s'%th_prob)
   mean_proba, sampled_probas = predict_mean_proba(X, model, num_monte_carlo=num_monte_carlo)
   mean_pred = tf.map_fn(fn=lambda x: predict_bayes_label(x, th_prob=th_prob), elems=mean_proba)
-
+  print("mean_pred  shape: %s" %str(mean_pred.shape))
   return sampled_probas, mean_proba, mean_pred 
 
 
@@ -240,7 +257,7 @@ def evaluate_accuracy_bayes(model, test_generator, out_path, num_monte_carlo=50,
         y_true = tf.argmax(y, axis=1)
         
         # Predict mean probability in each class by averaging on MC samples, then  label with prob threshold
-        sampled_probas, mean_proba, mean_pred = predict(X, model, num_monte_carlo, th_prob)
+        sampled_probas, mean_proba, mean_pred = my_predict(X, model, num_monte_carlo, th_prob)
         
         # Compute accuracy
         equality_batch = tf.equal(tf.cast(mean_pred, dtype=tf.int64), y_true)
@@ -254,32 +271,32 @@ def evaluate_accuracy_bayes(model, test_generator, out_path, num_monte_carlo=50,
     tot_acc = acc_total/test_generator.n_batches
     print('-- Accuracy on test set using median of sampled probabilities: %s %% \n' %( tot_acc.numpy()))  
     
-    all_sampled_probas=tf.concat(all_sampled_probas, axis=1)
-    print('Computing predictions on all test examples and all MC samples...')
-    all_preds = tf.map_fn(fn=lambda x: tf.map_fn(lambda y: predict_bayes_label(y, th_prob=th_prob), elems=x), elems=all_sampled_probas)
-    all_preds=tf.cast(all_preds, dtype=tf.int64)
+    #all_sampled_probas=tf.concat(all_sampled_probas, axis=1)
+    #print('Computing predictions on all test examples and all MC samples...')
+    #all_preds = tf.map_fn(fn=lambda x: tf.map_fn(lambda y: predict_bayes_label(y, th_prob=th_prob), elems=x), elems=all_sampled_probas)
+    #all_preds=tf.cast(all_preds, dtype=tf.int64)
     
-    all_y_true=tf.concat(y_true_tot, axis=0)
-    equality_arr = np.array([ tf.reduce_mean(tf.cast(tf.equal(my_pred, all_y_true), tf.float32)) for my_pred in all_preds])
+    #all_y_true=tf.concat(y_true_tot, axis=0)
+    #equality_arr = np.array([ tf.reduce_mean(tf.cast(tf.equal(my_pred, all_y_true), tf.float32)) for my_pred in all_preds])
     
-    high = np.percentile(equality_arr, 95)
-    low= np.percentile(equality_arr, 5)
-    median_arr=tf.reduce_mean(equality_arr) #np.percentile(equality_arr, 50)
-    t_string = r'Accuracy: %s + %s -%s (Mean $\pm$ 95%% C.I.), %s samples' %(np.round(median_arr,3), np.round(high-median_arr,3) ,np.round(median_arr-low,3), num_monte_carlo)
-    import matplotlib.pyplot as plt
-    plt.rcParams["font.family"] = 'serif'
-    plt.rcParams["mathtext.fontset"] = "cm"
-    _ = plt.hist(equality_arr)
-    plt.xlabel(r'Test Accuracy', fontsize=15)
-    plt.ylabel(r'Counts', fontsize=15)
-    plt.title(t_string)
-    print(t_string)
-    acc_path = out_path+'/accuracy_hist'
-    if FLAGS.fine_tune:
-        acc_path+='_FT'+ft_ver
-    acc_path+='.png'
-    print('Saving histogram of accuracy at %s' %acc_path)
-    plt.savefig(acc_path)
+    #high = np.percentile(equality_arr, 95)
+    #low= np.percentile(equality_arr, 5)
+    #median_arr=tf.reduce_mean(equality_arr) #np.percentile(equality_arr, 50)
+    #t_string = r'Accuracy: %s + %s -%s (Mean $\pm$ 95%% C.I.), %s samples' %(np.round(median_arr,3), np.round(high-median_arr,3) ,np.round(median_arr-low,3), num_monte_carlo)
+    #import matplotlib.pyplot as plt
+    #plt.rcParams["font.family"] = 'serif'
+    #plt.rcParams["mathtext.fontset"] = "cm"
+    #_ = plt.hist(equality_arr)
+    #plt.xlabel(r'Test Accuracy', fontsize=15)
+    #plt.ylabel(r'Counts', fontsize=15)
+    #plt.title(t_string)
+    #print(t_string)
+    #acc_path = out_path+'/accuracy_hist'
+    #if FLAGS.fine_tune:
+    #    acc_path+='_FT'+ft_ver
+    #acc_path+='.png'
+    #print('Saving histogram of accuracy at %s' %acc_path)
+    #plt.savefig(acc_path)
     
     
     #### CONFUSION MATRIX
@@ -290,7 +307,7 @@ def evaluate_accuracy_bayes(model, test_generator, out_path, num_monte_carlo=50,
         print('Adding Not classified label')
         names = names+['Not classified']
         
-    _ = print_cm(cm, names, out_path, fine_tune=FLAGS.fine_tune)
+    _ = print_cm(cm, names, out_path, FLAGS)
     
     
     return tot_acc

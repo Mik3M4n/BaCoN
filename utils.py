@@ -14,10 +14,10 @@ import argparse
 
 
 
-def get_fname_list(c_0, c_1, list_IDs_temp, data_root, list_IDs_temp_dict, fine_tune_dataset_balanced=True):
+def get_fname_list(c_0, c_1, list_IDs_temp, data_root, list_IDs_temp_dict, dataset_balanced=True):
     
     # np.array([self.data_root + '/'+l+ '/'+ str(ID) + '.txt' for ID in list_IDs_temp for l in self.labels])
-    if fine_tune_dataset_balanced:
+    if dataset_balanced:
         fnames_c0 = np.array([ data_root+'/'+c_0[0]+'/'+str(ID)+'.txt' for ID in list_IDs_temp ])
     
         fnames_c1 = []
@@ -128,10 +128,19 @@ def save_model(model, fname, params):
   
   
   
-def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False):
-  if Verbose:
+def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1):
+
+  #if Verbose:
+  print('- Cut sample')
+  print('bs: %s' %bs)
+  print('N_labels: %s' %n_labels)
+  print('N_noise: %s' %n_noise)
+  print('len_c1: %s' %len_c1)
+  if bs/(n_labels*n_noise)<1:
+    print('bs: %s' %bs)
     print('N_labels: %s' %n_labels)
     print('N_noise: %s' %n_noise)
+    raise ValueError('Batch size must be larger to support this number of noise realizations')
   a = indexes.shape[0]
   if Verbose:
     print('Indexes length: %s' %a)
@@ -151,14 +160,63 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False):
   check_val=int(idxs_new.shape[0]%(bs/(n_labels*n_noise)))
   if Verbose:
     print('New length: %s' %idxs_new.shape[0])
-    print('idxs_new.shape0 mod  bs/ n_labels x n_noise : %s' %check_val )
-    print('len(idxs_new)/n_noise=%s'%(idxs_new.shape[0]/n_noise))
+    
+    
+    #print('len(idxs_new)/n_labels x n_noise=%s'%((idxs_new.shape[0]/(n_labels*n_noise))) )
   #if not ((idxs_new.shape[0]/(n_labels*n_noise)).is_integer()) or not check_val!=0:
-  if check_val!=0 or not((idxs_new.shape[0]/n_noise).is_integer()) or not((idxs_new.shape[0]/(n_labels*n_noise)).is_integer()): #(n_labels*n_noise)%idxs_new.shape[0] !=0:
+  
+  case_dict={ 0: 'Ok.',
+              1: 'N. of indexes is not multiple of number of examples to read for each label', 
+              2: 'N of indexes is not multiple of number of batches',
+              3: 'N of indexes is not multiple of minimum batch size',
+              4: 'N of batches is not integer',
+              5: 'N of indexes in not multiple of min batch size',
+              6: 'N of indexes in not multiple of number of noisy samples'}
+  
+  n_batches=(idxs_new.shape[0]*n_noise*n_labels/(bs))
+  n_indexes=len_c1*bs/(n_labels*n_noise)
+  if Verbose:
+      print('N batches: %s' %n_batches)
+      print(' len_C1: %s' %len_c1)
+      print('N indexes: %s' %n_indexes)
+  case=0
+  if check_val!=0:
+      case=1
+      if Verbose:
+        print('idxs_new.shape0 mod  bs/ n_labels x n_noise : %s' %check_val )
+        print(case_dict[case])
+  if not((idxs_new.shape[0]/n_indexes).is_integer()):
+      case=2
+      if Verbose:
+        print('len(idxs_new)/n_indexes=%s'%(idxs_new.shape[0]/n_indexes))
+        print(case_dict[case])
+  if not((idxs_new.shape[0]*n_noise*n_labels/(bs)).is_integer()):
+      case=3
+      if Verbose:
+        print('len(idxs_new)x n_labels x n_noise /bs =%s'%((idxs_new.shape[0]*n_noise*n_labels/(bs))) )
+        print(case_dict[case])
+  if  not(n_batches.is_integer()):
+      case=4
+      if Verbose:
+        print('len(idxs_new)x n_labels x n_noise /bs =%s'%((idxs_new.shape[0]*n_noise*n_labels/(bs))) )
+        print(case_dict[case])
+  if not((idxs_new.shape[0]/(n_noise*n_labels)).is_integer):  
+      case=5
+      if Verbose:
+        print(' idxs_new.shape[0]/ n_noise x n_labels : %s' %(idxs_new.shape[0]/(n_noise*n_labels)) )
+        print(case_dict[case])
+  
+  if case==0:
+    if Verbose:
+        print(case_dict[case])
+  else:# check_val!=0 or not((idxs_new.shape[0]/n_noise).is_integer()) or not((idxs_new.shape[0]/(n_labels*n_noise)).is_integer()): #(n_labels*n_noise)%idxs_new.shape[0] !=0:
     if Verbose:
       print('Recursive call')
-    return(cut_sample(np.random.choice(indexes, int(a-1), replace=False), bs, n_labels=n_labels, n_noise=n_noise, Verbose=Verbose))
-
+    return(cut_sample(np.random.choice(indexes, int(a-1), replace=False), bs, n_labels=n_labels, n_noise=n_noise, Verbose=Verbose, len_c1=len_c1))
+  if len(np.unique(idxs_new))==0:
+    #if Verbose:
+    #print(case_dict[case])
+    raise ValueError('Adjust batch size, number of noise realizations, or validation set size')
   return np.unique(idxs_new)
   
 
@@ -288,24 +346,35 @@ def get_flags(log_path):
     FLAGS = parse_flags(FLAGS)
     if 'c_1' in FLAGS.keys():
         if len(FLAGS['c_1'])>1:
-            fine_tune_dict={ label:'non_lcdm' for label in FLAGS['c_1']}
+            group_lab_dict={ label:'non_lcdm' for label in FLAGS['c_1']}
         else:
-            fine_tune_dict={ label:label for label in FLAGS['c_1']}
+            group_lab_dict={ label:label for label in FLAGS['c_1']}
         
-        #fine_tune_dict={ label:'non_lcdm' for label in FLAGS['c_1']}
-        FLAGS['fine_tune_dict'] = fine_tune_dict
+        FLAGS['group_lab_dict'] = group_lab_dict
         for i in range(len(FLAGS['c_0']) ):
-          FLAGS['fine_tune_dict'][FLAGS['c_0'][i]]=FLAGS['c_0'][i]
+          FLAGS['group_lab_dict'][FLAGS['c_0'][i]]=FLAGS['c_0'][i]
         
     print('\n -------- Loaded parameters:')
     for key,value in FLAGS.items():
         print (key,value)
     
     try:
-        fine_tune_dataset_balanced=FLAGS['fine_tune_dataset_balanced']
+        fine_tune_dataset_balanced=FLAGS['dataset_balanced']
     except KeyError:
-        print(' ####  FLAGS.fine_tune_dataset_balanced not found! #### \n Probably loading an older model. Using fine_tune_dataset_balanced=True')
-        FLAGS['fine_tune_dataset_balanced']=True
+        print(' ####  FLAGS.dataset_balanced not found! #### \n Probably loading an older model. Using fine_tune_dataset_balanced')
+        
+        try:
+            fine_tune_dataset_balanced= FLAGS['fine_tune_dataset_balanced']
+        except KeyError:
+            print(' ####  FLAGS.fine_tune_dataset_balanced not found! #### \n Probably loading an older model. Using fine_tune_dataset_balanced=True')
+            FLAGS['fine_tune_dataset_balanced']=True
+        print('FLAGS.fine_tune_dataset_balanced : %s' %FLAGS['fine_tune_dataset_balanced'])
+    try:
+        one_vs_all=FLAGS['one_vs_all']  
+    except KeyError:
+        print(' ####  FLAGS.one_vs_all not found! #### \n Probably loading an older model. Using one_vs_all=FLAGS.fine_tune')
+        FLAGS['one_vs_all']=FLAGS['fine_tune']
+    print('FLAGS.one_vs_all : %s' %FLAGS['one_vs_all'])
     
     FLAGS_DH = DummyFlags(FLAGS)
   
@@ -323,7 +392,7 @@ def get_all_indexes(FLAGS, Test=False):
     
 
     
-    if not FLAGS.fine_tune:
+    if not (FLAGS.fine_tune or FLAGS.one_vs_all):
         labels=all_labels
         if FLAGS.sort_labels:
             labels.sort()
@@ -367,13 +436,15 @@ def get_all_indexes(FLAGS, Test=False):
         dir_name=data_dir+'/'+l
     else:
         dir_name=data_dir+'/'+l #+'_test'
-    all_index = np.array([int(str.split(name, sep='.')[0]) for name in os.listdir(dir_name) if os.path.isfile(os.path.join(dir_name, name))])
+    all_index = np.array([int(str.split(name, sep='.')[0]) for name in os.listdir(dir_name) if (os.path.isfile(os.path.join(dir_name, name)) and 'DS_Store' not in name)])
     assert all_index.shape[0]==n_samples
     print('\nN. of data files: %s' %all_index.shape)
     if FLAGS.test_mode and not Test:
         print('Choice with seed %s ' %FLAGS.seed)
         np.random.seed(FLAGS.seed)
-        if FLAGS.fine_tune and FLAGS.fine_tune_dataset_balanced:
+        if FLAGS.fine_tune and FLAGS.dataset_balanced:
+            my_size = 2*len(FLAGS.c_1)
+        elif not FLAGS.fine_tune and FLAGS.one_vs_all:
             my_size = 2*len(FLAGS.c_1)
         else:
             my_size = FLAGS.n_test_idx
