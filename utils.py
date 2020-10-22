@@ -431,7 +431,7 @@ def get_all_indexes(FLAGS, Test=False):
     
     n_samples = n_s[0]
     
-    l = 'lcdm'
+    l = all_labels[0]#'lcdm'
     if not Test:
         dir_name=data_dir+'/'+l
     else:

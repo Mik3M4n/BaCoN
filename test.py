@@ -227,22 +227,28 @@ def predict_bayes_label(mean_prob, th_prob=0.5):
   return pred_label
 
 
-def predict_mean_proba(X, model, num_monte_carlo=100):
+def predict_mean_proba(X, model, num_monte_carlo=100, softmax=True, verbose=False):
         sampled_logits = tf.stack([model.predict(X, verbose=0)
                           for _ in range(num_monte_carlo)], axis=0)
-        sampled_probas = tf.nn.softmax(sampled_logits, axis=-1)
-        print("sampled_probas shape: %s" %str(sampled_probas.shape))
+        if softmax:
+            sampled_probas = tf.nn.softmax(sampled_logits, axis=-1)
+        else:
+            sampled_probas= sampled_logits
+        if verbose:
+            print("sampled_probas shape: %s" %str(sampled_probas.shape))
         mean_proba=tf.reduce_mean(sampled_probas, axis=0)
-        print("mean_proba  shape: %s" %str(mean_proba.shape))
+        if verbose:
+            print("mean_proba  shape: %s" %str(mean_proba.shape))
         return mean_proba, sampled_probas
 
 
-def my_predict(X, model, num_monte_carlo=100, th_prob=0.5):
-
-  print('using th_prob=%s'%th_prob)
-  mean_proba, sampled_probas = predict_mean_proba(X, model, num_monte_carlo=num_monte_carlo)
+def my_predict(X, model, num_monte_carlo=100, th_prob=0.5, verbose=False):
+  if verbose:
+      print('using th_prob=%s'%th_prob)
+  mean_proba, sampled_probas = predict_mean_proba(X, model, num_monte_carlo=num_monte_carlo, verbose=verbose)
   mean_pred = tf.map_fn(fn=lambda x: predict_bayes_label(x, th_prob=th_prob), elems=mean_proba)
-  print("mean_pred  shape: %s" %str(mean_pred.shape))
+  if verbose:
+      print("mean_pred  shape: %s" %str(mean_pred.shape))
   return sampled_probas, mean_proba, mean_pred 
 
 
