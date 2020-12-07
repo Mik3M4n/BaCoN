@@ -174,7 +174,7 @@ def print_cm(cm, names, out_path, FLAGS):
     #score_str='Accuracy: %s, Misclassified: %s'%(accuracy, misclass)
     plt.ylabel(r'True categories',fontsize=14);
     plt.xlabel(r'Predicted categories',fontsize=14);
-    plt.tick_params(labelsize=12);
+    plt.tick_params(labelsize=18);
     
     
     
@@ -184,10 +184,13 @@ def print_cm(cm, names, out_path, FLAGS):
         cm_path+='_FT'
     if not FLAGS.trainable:
         cm_path+='_frozen_weights'
-        
-    cm_path+='.png'
+    
+    cm_path_vals = cm_path+'_values.txt'
+    cm_path+='.pdf'
     plt.savefig(cm_path)
+    np.savetxt(cm_path_vals, cm)
     print('Saved confusion matrix at %s' %cm_path)
+    print('Saved confusion matrix values at %s' %cm_path_vals)
     
     return matrix_proportions    
 
@@ -254,6 +257,7 @@ def my_predict(X, model, num_monte_carlo=100, th_prob=0.5, verbose=False):
 
 def evaluate_accuracy_bayes(model, test_generator, out_path, num_monte_carlo=50, th_prob=0.5, names=None, FLAGS=None):
     acc_total=0
+    acc_total_no_uncl=0
     y_true_tot=[]
     y_pred_tot=[]
     all_sampled_probas = []
@@ -269,13 +273,20 @@ def evaluate_accuracy_bayes(model, test_generator, out_path, num_monte_carlo=50,
         equality_batch = tf.equal(tf.cast(mean_pred, dtype=tf.int64), y_true)
         accuracy = tf.reduce_mean(tf.cast(equality_batch, tf.float32))  
         
+        equality_batch_no_uncl = tf.equal(tf.cast(mean_pred[mean_pred!=99], dtype=tf.int64), y_true[mean_pred!=99])
+        accuracy_no_uncl = tf.reduce_mean(tf.cast(equality_batch_no_uncl, tf.float32))  
+        
         print('Accuracy on %s batch using median of sampled probabilities: %s %%' %(batch_idx, accuracy.numpy()))
+        print('Accuracy on %s batch using median of sampled probabilities, not considering unclassified examples: %s %%' %(batch_idx, accuracy_no_uncl.numpy()))
         acc_total += accuracy
+        acc_total_no_uncl+=accuracy_no_uncl
         y_true_tot.append(y_true)
         y_pred_tot.append(mean_pred)
         all_sampled_probas.append(sampled_probas)
     tot_acc = acc_total/test_generator.n_batches
-    print('-- Accuracy on test set using median of sampled probabilities: %s %% \n' %( tot_acc.numpy()))  
+    tot_acc_no_uncl = acc_total_no_uncl/test_generator.n_batches
+    print('-- Accuracy on test set using median of sampled probabilities: %s %% \n' %( tot_acc.numpy()))
+    print('-- Accuracy on test set using median of sampled probabilities, not considering unclassified examples: %s %% \n' %( tot_acc_no_uncl.numpy()))
     
     #all_sampled_probas=tf.concat(all_sampled_probas, axis=1)
     #print('Computing predictions on all test examples and all MC samples...')

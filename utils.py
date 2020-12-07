@@ -128,7 +128,7 @@ def save_model(model, fname, params):
   
   
   
-def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1):
+def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec=0):
 
   #if Verbose:
   print('- Cut sample')
@@ -211,8 +211,11 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1):
         print(case_dict[case])
   else:# check_val!=0 or not((idxs_new.shape[0]/n_noise).is_integer()) or not((idxs_new.shape[0]/(n_labels*n_noise)).is_integer()): #(n_labels*n_noise)%idxs_new.shape[0] !=0:
     if Verbose:
-      print('Recursive call')
-    return(cut_sample(np.random.choice(indexes, int(a-1), replace=False), bs, n_labels=n_labels, n_noise=n_noise, Verbose=Verbose, len_c1=len_c1))
+      print('Recursive call N %s' %nRec)
+    nRec+=1
+    if nRec>10:
+      Verbose=False
+    return(cut_sample(np.random.choice(indexes, int(a-1), replace=False), bs, n_labels=n_labels, n_noise=n_noise, Verbose=Verbose, len_c1=len_c1, nRec= nRec))
   if len(np.unique(idxs_new))==0:
     #if Verbose:
     #print(case_dict[case])

@@ -454,13 +454,13 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
           idx_file = self.models_dir+'/idx_files/idx_file_batch'+ str(self.batch_idx)+'.txt'                  
           #label_list = [f.split('/')[2] for f in fname_list]
           print('Saving indexes in  %s' %idx_file)
-          idx_list = [int(f.split('.')[0].split('/')[-1] ) for f in fname_list_shuffled]
+          idx_list = [f.split('.')[0].split('/')[-2]+'/'+f.split('.')[0].split('/')[-1]  for f in fname_list_shuffled]
           self.save_indexes_dict[self.batch_idx] = idx_list
           
           with open(idx_file, 'w+') as file:
               print('Opened %s' %idx_file)
-              for idx in idx_list: #i in range(len(idx_list)):
-                  file.write("%i\n" %idx)
+              for i, idx in enumerate(idx_list): #i in range(len(idx_list)):
+                  file.write(idx+'\n')
        
 
         #print('Seen in this batch: ')
@@ -664,20 +664,39 @@ def create_test_generator(FLAGS):
     
     all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS, Test=True)
     
+
+    if (FLAGS.fine_tune or FLAGS.one_vs_all) and FLAGS.dataset_balanced:
+        # balanced dataset , 1/2 lcdm , 1/2 rest in FT or one vs all mode
+        case=1
+        n_labels_eff = n_labels*len(FLAGS.c_1)
+        len_c1=len(FLAGS.c_1)
+    elif not (FLAGS.fine_tune or FLAGS.one_vs_all):
+        # regular case
+        case=2
+        n_labels_eff=n_labels
+        len_c1=1
+    elif (FLAGS.fine_tune or FLAGS.one_vs_all) and not FLAGS.dataset_balanced:
+        #  Unbalanced dataset , 1/5 lcdm , 1/5 rest in FT or one vs all mode
+        case=3
+        n_labels_eff = len(all_labels)
+        len_c1=1
+    print('create_generators n_labels_eff: %s' %n_labels_eff)  
+    print('create_generators len_c1: %s' %len_c1)
+
     #if FLAGS.fine_tune:
     #    n_labels_eff = n_labels*len(FLAGS.c_1)
     #else:
     #    n_labels_eff = n_labels
     
-    if FLAGS.fine_tune and FLAGS.dataset_balanced:
-        n_labels_eff = n_labels*len(FLAGS.c_1)
-        len_c1=len(FLAGS.c_1)
-    elif not FLAGS.fine_tune:
-        n_labels_eff=n_labels
-        len_c1=1
-    elif FLAGS.fine_tune and not FLAGS.dataset_balanced:
-        n_labels_eff = len(all_labels)
-        len_c1=1
+    #if FLAGS.fine_tune and FLAGS.dataset_balanced:
+    #    n_labels_eff = n_labels*len(FLAGS.c_1)
+    #    len_c1=len(FLAGS.c_1)
+    #elif not FLAGS.fine_tune:
+    #    n_labels_eff=n_labels
+    #    len_c1=1
+    #elif FLAGS.fine_tune and not FLAGS.dataset_balanced:
+    #    n_labels_eff = len(all_labels)
+    #    len_c1=1
         
     
     if FLAGS.add_noise:

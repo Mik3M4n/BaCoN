@@ -11,6 +11,8 @@ tf.enable_v2_behavior()
 tfd = tfp.distributions
 
 
+
+
 def make_model(model_name, **params):
     
     if model_name=='dummy':
@@ -19,6 +21,7 @@ def make_model(model_name, **params):
         return make_custom_model(**params)
     else:
         raise ValueError('Enter a valid model name.')
+
 
 
 # ------------------------------------------------------
@@ -40,14 +43,13 @@ def make_custom_model(   drop=0.5,
     n_conv=len(kernel_sizes)
     
     
-    if swap_axes:#input_shape[-1]>1 :
+    if swap_axes:
         print('using 1D layers and %s channels' %input_shape[-1])
         is_1D = True
         flayer =  tf.keras.layers.GlobalAveragePooling1D()
-        #flayer = tf.keras.layers.Flatten()
-        #f_dim=1
+
         f_dim_0=input_shape[0]
-        f_dim_1=1#input_shape[1]
+        f_dim_1=1
         
         maxpoolL = tf.keras.layers.MaxPooling1D
         
@@ -60,10 +62,8 @@ def make_custom_model(   drop=0.5,
     else:
         print('using 2D layers and %s channels' %input_shape[-1])
         is_1D=False
-        #f_dim=1
         f_dim_0=input_shape[0]
         f_dim_1=input_shape[1]
-        #flayer = tf.keras.layers.Flatten()
         flayer = tf.keras.layers.GlobalAveragePooling2D()
         maxpoolL = tf.keras.layers.MaxPooling2D
         
@@ -123,8 +123,6 @@ def make_custom_model(   drop=0.5,
     
     
     # Dense Layers
-    #if not is_1D:
-    #f_dim = f_dim_0*f_dim_1
     for _ in range(n_dense): 
         x = dlayer(filters[-1], activation=activation)(x)
         # Batch Normalisation
@@ -146,178 +144,8 @@ def make_custom_model(   drop=0.5,
 
 
 
-
 # ------------------------------------------------------
 
-def make_custom_model_old(   drop=0.5, 
-                          n_labels=2, 
-                          input_shape=( 125, 4, 1), 
-                          padding='valid', 
-                          filters=(8, 16, 32),
-                          kernel_sizes=(10,5,2),
-                          strides=(2,2,1),
-                          pool_sizes=(2, 2, 1),
-                          strides_pooling=(2, 1, 1),
-                          activation=tf.nn.leaky_relu,
-                          bayesian=False, 
-                          n_dense=1, swap_axes=True, BatchNorm=True
-                          ):
-    
-    n_conv=len(kernel_sizes)
-    
-    if swap_axes:#input_shape[-1]>1 :
-        print('using 1D layers and %s channels' %input_shape[-1])
-        is_1D = True
-        flayer =  tf.keras.layers.GlobalAveragePooling1D()
-        #flayer = tf.keras.layers.Flatten()
-        #f_dim=1
-        f_dim_0=input_shape[0]
-        f_dim_1=1#input_shape[1]
-        
-        maxpoolL = tf.keras.layers.MaxPooling1D
-        
-        if not bayesian:
-            clayer = tf.keras.layers.Conv1D
-            dlayer = tf.keras.layers.Dense
-        else:
-            clayer = tfp.layers.Convolution1DFlipout
-            dlayer = tfp.layers.DenseFlipout
-    else:
-        print('using 2D layers and %s channels' %input_shape[-1])
-        is_1D=False
-        #f_dim=1
-        f_dim_0=input_shape[0]
-        f_dim_1=input_shape[1]
-        #flayer = tf.keras.layers.Flatten()
-        flayer = tf.keras.layers.GlobalAveragePooling2D()
-        maxpoolL = tf.keras.layers.MaxPooling2D
-        
-        if not bayesian:
-            clayer = tf.keras.layers.Conv2D
-            dlayer = tf.keras.layers.Dense
-        else:
-            clayer = tfp.layers.Convolution2DFlipout
-            dlayer = tfp.layers.DenseFlipout
-    
-  # (3) Create a sequential model
-    model = tf.keras.models.Sequential() 
-                                
-    model.add(tf.keras.Input(shape=input_shape))
-
-    
-    
-    for i in range(n_conv):
-    
-    #  Convolutional Layers
-    
-        ks=(kernel_sizes[i],1)
-        st=(strides[i],1)
-        ps=(pool_sizes[i],1)
-        spool=(strides_pooling[i],1)
-        if is_1D:
-            ks, st, ps, spool= (ks[0],), (st[0],), (ps[0],), (spool[0],)
-
-        conv1 = clayer(filters=filters[i], input_shape=input_shape, 
-                                  kernel_size=ks, strides=st, 
-                                  padding=padding, activation=activation)
-        #if not is_1D:
-        f_dim_0 = (f_dim_0 - ks[0])/st[0]+1
-        print(f_dim_0)
-
-        model.add(conv1)
-        if ps[0]!=0:
-            # Pooling 
-            model.add(maxpoolL(pool_size=ps, strides=spool, padding=padding))
-            #if not is_1D:
-            f_dim_0 = (f_dim_0 - ps[0])/spool[0]+1
-            print(f_dim_0)
-        # Batch Normalisation
-        if i<n_conv and BatchNorm:
-                model.add(tf.keras.layers.BatchNormalization(axis=-1, momentum=0.99))
-  
-    
-    
-    # Prepare input for Dense layers
-    model.add(flayer)
-    
-    
-    # Dense Layers
-    #if not is_1D:
-    f_dim = f_dim_0*f_dim_1
-    for _ in range(n_dense): 
-        model.add(dlayer(filters[-1], activation=activation))
-        # Batch Normalisation
-        if  BatchNorm:
-            model.add(tf.keras.layers.BatchNormalization(axis=-1, momentum=0.99))
-        # Add Dropout 
-        if not bayesian and drop!=0.:
-            model.add(tf.keras.layers.Dropout(drop))
-
- 
-    # Output Layer
-    outL = dlayer(n_labels)
-    
-    model.add(outL)
-
-    return model
-
-
-# ------------------------------------------------------
-
-
-def make_fine_tuning_model_old(base_model, n_out_labels, dense_dim=32, 
-                           bayesian=True, trainable=True, drop=0.5, BatchNorm=True):
-
-    model = tf.keras.models.Sequential()
-    for layer in base_model.layers[:-1]: # go through until ith layer
-        model.add(layer)
-
-    if bayesian and dense_dim>0.:
-        denseL = tfp.layers.DenseFlipout(dense_dim)
-    elif not bayesian:
-        denseL = tf.keras.layers.Dense(dense_dim)
-    
-    if dense_dim>0:
-        model.add(denseL)
-        if  BatchNorm:
-            model.add(tf.keras.layers.BatchNormalization(axis=-1, momentum=0.99))
-        if not bayesian and drop!=0.:
-            model.add(tf.keras.layers.Dropout(drop))
-    
-    if bayesian:
-        outL = tfp.layers.DenseFlipout(n_out_labels)
-    else:
-        outL = tf.keras.layers.Dense(n_out_labels)
-    model.add(outL)
-    
-    
-    return model
-
-
-
-
-def make_unfreeze_model(base_model, input_shape, n_out_labels, dense_dim=0, 
-                           bayesian=True, drop=0.5, BatchNorm=True,):
-    #print('Making unfrozen model')
-    inputs = tf.keras.Input(shape=input_shape)
-    first_layer=True
-    for layer in base_model.layers[:-1]: # go through until last layer
-        layer.trainable = True
-        #print(layer.name)
-        if first_layer:
-          x=layer(inputs, training=True)
-          first_layer=False
-        else:
-          x=layer(x, training=True)
-        #print(x.shape)
-          
-    last_layer=base_model.layers[-1]
-    last_layer.trainable = True
-    outputs=last_layer(x, training=True)
-    model = tf.keras.Model(inputs, outputs)
-
-    #print('\nDone.')
-    return model
 
 
 def make_fine_tuning_model(base_model, input_shape, n_out_labels, dense_dim=0, 
@@ -426,4 +254,35 @@ def make_model_dummy(drop=0.,
   model.add(outL)
 
   return model
+
+
+
+# ------------------------------------------------------
+
+
+
+def make_unfreeze_model(base_model, input_shape, n_out_labels, dense_dim=0, 
+                           bayesian=True, drop=0.5, BatchNorm=True,):
+    #print('Making unfrozen model')
+    inputs = tf.keras.Input(shape=input_shape)
+    first_layer=True
+    for layer in base_model.layers[:-1]: # go through until last layer
+        layer.trainable = True
+        #print(layer.name)
+        if first_layer:
+          x=layer(inputs, training=True)
+          first_layer=False
+        else:
+          x=layer(x, training=True)
+        #print(x.shape)
+          
+    last_layer=base_model.layers[-1]
+    last_layer.trainable = True
+    outputs=last_layer(x, training=True)
+    model = tf.keras.Model(inputs, outputs)
+
+    #print('\nDone.')
+    return model
+
+
 
