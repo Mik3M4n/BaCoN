@@ -6,9 +6,9 @@ These scripts are used to generate the power spectrum data files used in trainin
 
 2) Modify the configuration.dat file to include your CAMB and ReACT directories as well as the redshifts, k-bins and k-ranges you want to output at. k-modes are sampled logarithmically. Redshifts should be specified in descending order. 
 
-3) Generate a cosmology/gravity parameter file with param_generation.nb, or just create your own file with the format: 
+3) Generate a cosmology/gravity parameter file with *param\_generation.nb*, or just create your own file with the format: 
 
-Index Omegam Omegab H0 ns  sigma8* param1 param2 param3 
+Index Omega\_m Omega\_b H\_0 n\_s  sigma\_8* param1 param2 param3 
 
 Where param1-3 are the additional parameters of the model. Ex. Param1 = fr0 for f(R). These should correspond to the parametrisation included in reactions/src/SpecialFunctions.cpp. 
 
@@ -19,8 +19,8 @@ Where param1-3 are the additional parameters of the model. Ex. Param1 = fr0 for 
 
 # Note on sigma_8*: 
 
-The value specified in the myfile.txt is not the true sigma_8 but a rescaling. You can find the ‘true’ LCDM value of sigma_8 by:   
+The value specified in the myfile.txt is not the true sigma\_8 but a rescaling. You can find the ‘true’ LCDM value of sigma_8 by:   
 
 > sigma_8(true) = ( sigma_8(camb)  / sigma_8* ) x sigma_8(camb)
 
-Where sigma_8(camb) is the value given by CAMB.  
+Where sigma\_8(camb) is the value given by CAMB.  
