@@ -11,4 +11,4 @@ Scripts used to generate the random filters as described in Appendix A.
 > g++ -lgsl random\_pk\_gen.cpp 
 > ./a.out 
 
-Make sure the number of reference pk (noref) and number of filters (Nfilters) is consistent between *random\_pk\_gen.cpp* and those included in the *random\_pk* folder
+Make sure the number of reference pk (noref) and number of filters (Nfilters) is consistent between *random\_pk\_gen.cpp* and those included in the *random\_pk* folder.
