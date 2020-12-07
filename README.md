@@ -192,3 +192,7 @@ test.py [-h] --log_path LOG_PATH [--TEST_DIR TEST_DIR]
 ## Adding cosmologies
 
 ## Modifying the code
+
+## Scripts folder
+
+The *scripts* folder contains useful bash, *c++* and Mathematica scripts that were used to create and process the data. Each subfolder has an individual README outlining what each script does. 
