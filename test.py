@@ -21,12 +21,7 @@ from train import ELBO, my_loss
 
 
 def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_ORIGINAL=None, new_fname=None):
-    
-     
-    #print('\n -------- Parameters:')
-    #for key,value in FLAGS.items():
-    #        print (key,value)
-     
+         
 
     
     print('------------ BUILDING MODEL ------------\n')
@@ -41,7 +36,6 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_O
         print(' ####  FLAGS.BatchNorm not found! #### \n Probably loading an older model. Using BatchNorm=True')
         BatchNorm=True
     
-    #drop=0.
     model=make_model(  model_name=FLAGS.model_name,
                          drop=0, 
                           n_labels=n_classes, 
@@ -77,7 +71,7 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_O
             ft_ckpt_name += '_unbalanced'
         else:
             ft_ckpt_name += '_balanced'
-        if not FLAGS.trainable:
+        if not FLAGS.trainable and FLAGS.fine_tune:
             ft_ckpt_name+='_frozen_weights'
         else:
             ft_ckpt_name+='_all_weights'
@@ -109,14 +103,12 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_O
     optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
     ckpts_path = out_path
     ckpts_path+='/tf_ckpts'
-    #ckpt_name = 'ckpt'
     if FLAGS.fine_tune:
         ckpts_path += '_fine_tuning'+ft_ckpt_name
     ckpts_path+='/'
     print('Looking for ckpt in ' + ckpts_path)
     ckpt = tf.train.Checkpoint(optimizer=optimizer, net=model)
     
-    #manager = tf.train.CheckpointManager(ckpt, ckpts_path, max_to_keep=2, checkpoint_name=ckpt_name)
     
     latest = tf.train.latest_checkpoint(ckpts_path)
     if latest:
@@ -125,7 +117,6 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_O
         raise ValueError('Checkpoint not found')
         #print('Checkpoint not found')
     ckpt.restore(latest)
-    #ckpt.restore(manager.latest_checkpoint)
     
     if generator is not None:
         loss_1 = compute_loss(generator, model, bayesian=FLAGS.bayesian)
@@ -144,7 +135,6 @@ def compute_loss(generator, model, bayesian=False):
     else:
             #print('Frequentist')
             loss_0 = my_loss(y_batch_train, logits)
-    #print('Loss ok')
     return loss_0
 
   
@@ -175,7 +165,6 @@ def print_cm(cm, names, out_path, FLAGS):
     plt.ylabel(r'True categories',fontsize=14);
     plt.xlabel(r'Predicted categories',fontsize=14);
     plt.tick_params(labelsize=18);
-    
     
     
     #plt.show()
@@ -287,34 +276,7 @@ def evaluate_accuracy_bayes(model, test_generator, out_path, num_monte_carlo=50,
     tot_acc_no_uncl = acc_total_no_uncl/test_generator.n_batches
     print('-- Accuracy on test set using median of sampled probabilities: %s %% \n' %( tot_acc.numpy()))
     print('-- Accuracy on test set using median of sampled probabilities, not considering unclassified examples: %s %% \n' %( tot_acc_no_uncl.numpy()))
-    
-    #all_sampled_probas=tf.concat(all_sampled_probas, axis=1)
-    #print('Computing predictions on all test examples and all MC samples...')
-    #all_preds = tf.map_fn(fn=lambda x: tf.map_fn(lambda y: predict_bayes_label(y, th_prob=th_prob), elems=x), elems=all_sampled_probas)
-    #all_preds=tf.cast(all_preds, dtype=tf.int64)
-    
-    #all_y_true=tf.concat(y_true_tot, axis=0)
-    #equality_arr = np.array([ tf.reduce_mean(tf.cast(tf.equal(my_pred, all_y_true), tf.float32)) for my_pred in all_preds])
-    
-    #high = np.percentile(equality_arr, 95)
-    #low= np.percentile(equality_arr, 5)
-    #median_arr=tf.reduce_mean(equality_arr) #np.percentile(equality_arr, 50)
-    #t_string = r'Accuracy: %s + %s -%s (Mean $\pm$ 95%% C.I.), %s samples' %(np.round(median_arr,3), np.round(high-median_arr,3) ,np.round(median_arr-low,3), num_monte_carlo)
-    #import matplotlib.pyplot as plt
-    #plt.rcParams["font.family"] = 'serif'
-    #plt.rcParams["mathtext.fontset"] = "cm"
-    #_ = plt.hist(equality_arr)
-    #plt.xlabel(r'Test Accuracy', fontsize=15)
-    #plt.ylabel(r'Counts', fontsize=15)
-    #plt.title(t_string)
-    #print(t_string)
-    #acc_path = out_path+'/accuracy_hist'
-    #if FLAGS.fine_tune:
-    #    acc_path+='_FT'+ft_ver
-    #acc_path+='.png'
-    #print('Saving histogram of accuracy at %s' %acc_path)
-    #plt.savefig(acc_path)
-    
+        
     
     #### CONFUSION MATRIX
     from sklearn.metrics import confusion_matrix
@@ -429,7 +391,6 @@ def main():
     model_loaded =  load_model_for_test(FLAGS, input_shape, n_classes=test_generator.n_classes_out,
                                         generator=test_generator)
     
-   #test_generator[1]
     
     names=[ test_generator.inv_labels_dict[i] for i in range(len(test_generator.inv_labels_dict.keys()))]
     

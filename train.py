@@ -14,8 +14,7 @@ tf.enable_v2_behavior()
 tfd = tfp.distributions
 from data_generator import create_generators
 from models import *
-#from flags import FLAGS
-from utils import DummyHist, plot_hist, str2bool, Logger, Unbuffered, get_flags
+from utils import DummyHist, plot_hist, str2bool, Logger, get_flags
 import sys
 import time
 
@@ -26,20 +25,14 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
     #print('train_on_batch call')
     with tf.GradientTape() as tape:
         tape.watch(model.trainable_variables) 
-        #logits = model(x, training=True)
         for layer in model.layers:  # In order to support frozen weights
-            #print(x.shape)
-            #print(layer.name)
-            #print(layer.trainable)
             x = layer(x, training=layer.trainable)
-            #print(x.shape)
         logits=x
         if bayesian:
              kl = sum(model.losses)/n_train_example
              loss_value = loss(y, logits, kl)
         else:
             loss_value = loss(y, logits)
-        #loss_value += sum(model.losses)
     grads = tape.gradient(loss_value, model.trainable_weights)
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
     proba = tf.nn.softmax(logits)
@@ -64,14 +57,12 @@ def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10
 @tf.function
 def my_loss(y, logits):
     loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
-    return loss_f(y, logits) #tf.reduce_mean(loss_f(y, logits))
+    return loss_f(y, logits) 
 
 
 @tf.function
 def ELBO(y, logits, kl):
-    #loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True) 
-    neg_log_likelihood = my_loss(y, logits) #loss_f(y, logits)   
-    #loss = 
+    neg_log_likelihood = my_loss(y, logits)   
     return neg_log_likelihood + kl
 
 
@@ -109,7 +100,6 @@ def my_train(model, optimizer, loss,
                  'val_loss': np.loadtxt(fname_hist+'_val_loss.txt').tolist()[0:hist_start], 
                  'accuracy': np.loadtxt(fname_hist+'_accuracy.txt').tolist()[0:hist_start], 
                  'val_accuracy':np.loadtxt(fname_hist+'_val_accuracy.txt').tolist()[0:hist_start] }
-      #print(history)
       for key in history.keys():
         fname = fname_hist+'_'+key+'.txt'
         fname_new = fname_hist+'_'+key+'_original.txt'
@@ -143,9 +133,7 @@ def my_train(model, optimizer, loss,
     for batch_idx, batch in enumerate(train_generator):
         x_batch_train, y_batch_train = batch #train_generator[batch_idx]
         loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example)
-        #if bayesian:
-        #    loss_value = loss_value /x_batch_train.shape[0]/ float(train_generator.n_batches)
-
+ 
     
     # Run  validation loop
     val_loss_value = 0.
@@ -153,10 +141,7 @@ def my_train(model, optimizer, loss,
         x_batch_val, y_batch_val = val_batch #val_generator[val_batch_idx]
         lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example)/ float(val_generator.n_batches)
         val_loss_value += lv
-        
-        #if bayesian:
-        #    val_loss_value = val_loss_value/x_batch_val.shape[0]/float(val_generator.n_batches)
-    
+            
     
     if val_loss_value.numpy()<best_loss: #int(ckpt.step) % 10 == 0:
         if save_ckpt:
@@ -192,13 +177,7 @@ def my_train(model, optimizer, loss,
     history['val_accuracy'].append(val_acc)
     val_acc_metric.reset_states()
     
-    #print(manager.directory)
-    #+str(epoch)
-    #with open(fname_hist, 'w') as fp:
-          
-        #if epoch>0:
-        #    os.remove(manager.directory+'/hist_'+str(epoch-1)+'_'+key+'.txt')
-        #np.savetxt(fname_hist+'_'+key+'.txt', history[key])
+
     if epoch==0:
         if restore:          
             for key in history.keys():
@@ -219,6 +198,10 @@ def my_train(model, optimizer, loss,
             fname = fname_hist+'_'+key+'.txt'
             with open(fname, 'a') as fh:
                 fh.write(str(history[key][-1])+'\n') 
+                
+    ###
+    # Uncomment if training in a jupyter notebook, to print the status on epoch bar
+    ###
     #epoch_bar.set_postfix(train_loss=loss_value.numpy(), val_loss=val_loss_value.numpy(), 
     #                      train_accuracy = train_acc.numpy(), val_accuracy=val_acc.numpy())
     #print("Time taken: %.2fs" % (time.time() - start_time))
@@ -238,6 +221,8 @@ def compute_loss(generator, model, bayesian=False):
     return loss_0
 
 
+
+
 def main():
     
     in_time=time.time()
@@ -245,9 +230,9 @@ def main():
     ## Read params from stdin
     parser = argparse.ArgumentParser()
     
-    parser.add_argument("--bayesian", default=False, type=str2bool, required=False)
+    parser.add_argument("--bayesian", default=True, type=str2bool, required=False)
     
-    parser.add_argument("--test_mode", default=True, type=str2bool, required=False)
+    parser.add_argument("--test_mode", default=False, type=str2bool, required=False)
     parser.add_argument("--n_test_idx", default=2, type=int, required=False)
     parser.add_argument("--seed", default=1312, type=int, required=False)
     
@@ -255,22 +240,21 @@ def main():
     parser.add_argument("--one_vs_all", default=False, type=str2bool, required=False)
     parser.add_argument("--c_0", nargs='+', default=['lcdm'], required=False)
     parser.add_argument("--c_1", nargs='+', default=['fR', 'dgp', 'wcdm', 'rand'], required=False)
-    parser.add_argument("--dataset_balanced", default=True, type=str2bool, required=False)
-    parser.add_argument("--include_last", default=True, type=str2bool, required=False)
+    parser.add_argument("--dataset_balanced", default=False, type=str2bool, required=False)
+    parser.add_argument("--include_last", default=False, type=str2bool, required=False)
     
     
     parser.add_argument("--log_path", default='', type=str, required=False)
-    
     parser.add_argument("--restore", default=False, type=str2bool, required=False)
 
     
     # FNAMES ETC
-    parser.add_argument("--fname", default='my_net', type=str, required=False)
-    parser.add_argument("--model_name", default='AlexNet', type=str, required=False)
-    parser.add_argument("--my_path", default='/content/drive/My Drive/ML_REACT/', type=str, required=False)
-    parser.add_argument("--DIR", default='data/train_data/train_data_corrected', type=str, required=False)
-    parser.add_argument("--TEST_DIR", default='data/test_data/new_test_data', type=str, required=False)  
-    parser.add_argument("--models_dir", default='models/MM/', type=str, required=False)
+    parser.add_argument("--fname", default='my_model', type=str, required=False)
+    parser.add_argument("--model_name", default='custom', type=str, required=False)
+    parser.add_argument("--my_path", default='', type=str, required=False)
+    parser.add_argument("--DIR", default='data/train_data/', type=str, required=False)
+    parser.add_argument("--TEST_DIR", default='data/test_data/', type=str, required=False)  
+    parser.add_argument("--models_dir", default='models/', type=str, required=False)
     parser.add_argument("--save_ckpt", default=True, type=str2bool, required=False)
     parser.add_argument("--out_path_overwrite", default=False, type=str2bool, required=False)
     
@@ -289,46 +273,43 @@ def main():
     parser.add_argument("--normalization", default='stdcosmo', type=str, required=False)
     parser.add_argument("--sample_pace", default=4, type=int, required=False)
     
-    parser.add_argument("--k_max", default=None, type=float, required=False)
+    parser.add_argument("--k_max", default=2.5, type=float, required=False)
     parser.add_argument("--i_max", default=None, type=int, required=False)
     
     parser.add_argument("--add_noise", default=True, type=str2bool, required=False)
     parser.add_argument("--n_noisy_samples", default=10, type=int, required=False)
     parser.add_argument("--add_shot", default=True, type=str2bool, required=False)
     parser.add_argument("--add_sys", default=True, type=str2bool, required=False)
-    parser.add_argument("--sigma_sys", default=2.5, type=float, required=False)
+    parser.add_argument("--sigma_sys", default=5., type=float, required=False)
     
     parser.add_argument('--z_bins', nargs='+', default=[0,1,2,3], required=False)
 
     
     
     # NET STRUCTURE
-    #parser.add_argument("--k1", default=8, type=int, required=False)
-    #parser.add_argument("--k2", default=16, type=int, required=False)
-    #parser.add_argument("--k3", default=32, type=int, required=False)
-    parser.add_argument("--n_dense", default=0, type=int, required=False)
-    #parser.add_argument("--n_conv", default=3, type=int, required=False)
+    parser.add_argument("--n_dense", default=1, type=int, required=False)
     parser.add_argument("--filters", nargs='+', default=[8,16,32], required=False)
     parser.add_argument("--kernel_sizes", nargs='+', default=[10,5,2], required=False)
     parser.add_argument("--strides", nargs='+', default=[2,2,1], required=False)
-    parser.add_argument("--pool_sizes", nargs='+', default=[2,2,1], required=False)
-    parser.add_argument("--strides_pooling", nargs='+', default=[2,1,1], required=False)
+    parser.add_argument("--pool_sizes", nargs='+', default=[2,2,0], required=False)
+    parser.add_argument("--strides_pooling", nargs='+', default=[2,1,0], required=False)
     
-    parser.add_argument("--add_FT_dense", default=True, type=str2bool, required=False)
-    parser.add_argument("--trainable", default=True, type=str2bool, required=False)
+    # FINE TUNING OPTIONS
+    parser.add_argument("--add_FT_dense", default=False, type=str2bool, required=False)
+    parser.add_argument("--trainable", default=False, type=str2bool, required=False)
     parser.add_argument("--unfreeze", default=False, type=str2bool, required=False)
     
     
     # PARAMETERS FOR TRAINING
-    parser.add_argument("--lr", default=2e-05, type=float, required=False)
+    parser.add_argument("--lr", default=0.01, type=float, required=False)
     parser.add_argument("--drop", default=0.5, type=float, required=False)
-    parser.add_argument("--n_epochs", default=10, type=int, required=False)
+    parser.add_argument("--n_epochs", default=70, type=int, required=False)
     parser.add_argument("--val_size", default=0.15, type=float, required=False)
     parser.add_argument("--test_size", default=0., type=float, required=False)
-    parser.add_argument("--batch_size", default=1050, type=int, required=False)
-    parser.add_argument("--patience", default=10, type=int, required=False)
-    parser.add_argument("--GPU", default=False, type=str2bool, required=False)
-    parser.add_argument("--decay", default=None, type=float, required=False)
+    parser.add_argument("--batch_size", default=2500, type=int, required=False)
+    parser.add_argument("--patience", default=100, type=int, required=False)
+    parser.add_argument("--GPU", default=True, type=str2bool, required=False)
+    parser.add_argument("--decay", default=0.95, type=float, required=False)
     parser.add_argument("--BatchNorm", default=True, type=str2bool, required=False)
     
 
@@ -406,11 +387,16 @@ def main():
     if FLAGS.test_mode and not FLAGS.fine_tune:
         out_path=out_path+'_test'
         
-    #if not os.path.exists(out_path):
-    #    print('Creating directory %s' %out_path)
-    #    tf.io.gfile.makedirs(out_path)
-    #else:
-    #   print('Directory %s not created' %out_path)
+    ###
+    # Uncomment the parts below to redirect output to file. 
+    # Does not work on Google Colab
+    ###
+    
+    if not os.path.exists(out_path):
+        print('Creating directory %s' %out_path)
+        tf.io.gfile.makedirs(out_path)
+    else:
+       print('Directory %s not created' %out_path)
     
     #with open(out_path+'/params.txt', 'w') as fpar:    
     #    print('Opened params file %s. Writing params' %(out_path+'/params.txt'))
@@ -419,13 +405,10 @@ def main():
             print (key,value)
         #    fpar.write(' : '.join([str(key), str(value)])+'\n')
     
-    #logfile = out_path+'/logfile.txt'
-    #myLog = Logger(logfile)
-    #sys.stdout = myLog
+    logfile = os.path.join(out_path, FLAGS.fname+'_log.txt')
+    myLog = Logger(logfile)
+    sys.stdout = myLog
 
-    #ff = open(logfile, 'w')
-    #sys.stdout = ff
-    #sys.stdout=Unbuffered(sys.stdout, ff)
     
     
     
@@ -470,7 +453,6 @@ def main():
                 print(' ####  FLAGS.BatchNorm not found! #### \n Probably loading an older model. Using BatchNorm=True')
                 BatchNorm=True
 
-        #k_1, k_2, k_3, n_dense, n_conv  = FLAGS_ORIGINAL.k1, FLAGS_ORIGINAL.k2, FLAGS_ORIGINAL.k3, FLAGS_ORIGINAL.n_dense, FLAGS_ORIGINAL.n_conv
         filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense= FLAGS_ORIGINAL.filters, FLAGS_ORIGINAL.kernel_sizes, FLAGS_ORIGINAL.strides, FLAGS_ORIGINAL.pool_sizes, FLAGS_ORIGINAL.strides_pooling, FLAGS_ORIGINAL.n_dense
     else:
         try:
@@ -478,7 +460,6 @@ def main():
         except AttributeError:
             print(' ####  FLAGS.BatchNorm not found! #### \n Probably loading an older model. Using BatchNorm=True')
             BatchNorm=True
-        #k_1, k_2, k_3, n_dense, n_conv  = FLAGS.k1, FLAGS.k2, FLAGS.k3, FLAGS.n_dense, FLAGS.n_conv
         filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense
 
     model=make_model(     model_name=model_name,
@@ -545,8 +526,7 @@ def main():
         print('Loss after loading weights/ %s\n' %loss_1.numpy())
         if FLAGS.add_FT_dense:
             if not FLAGS.swap_axes:
-                #raise NotImplementedError("2D case is not yet fixed")
-                dense_dim=filters[-1]#4*4*k_2
+                dense_dim=filters[-1]
             else:
                 dense_dim=filters[-1]
         else:
@@ -623,12 +603,17 @@ def main():
     plot_hist(DummyHist(history), epochs=len(history['loss']), save=True, path=hist_path, show=False)
     
     
-    #ff.close()
-    #sys.stdout = sys.__stdout__
-    #myLog.close()
+    ###
+    # Uncoment if saving output on file, to properly close
+    ###
+    sys.stdout = sys.__stdout__
+    myLog.close()
     
     print('Done in %.2fs' %(time.time() - in_time))
-        
+   
+
+
+     
         
 if __name__=='__main__':
     

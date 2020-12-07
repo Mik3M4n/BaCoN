@@ -26,17 +26,17 @@ def make_model(model_name, **params):
 
 # ------------------------------------------------------
 
-def make_custom_model(   drop=0.5, 
-                          n_labels=2, 
-                          input_shape=( 125, 4, 1), 
+def make_custom_model(    drop=0.5, 
+                          n_labels=5, 
+                          input_shape=( 100, 4), 
                           padding='valid', 
                           filters=(8, 16, 32),
                           kernel_sizes=(10,5,2),
                           strides=(2,2,1),
-                          pool_sizes=(2, 2, 1),
-                          strides_pooling=(2, 1, 1),
+                          pool_sizes=(2, 2, 0),
+                          strides_pooling=(2, 1, 0),
                           activation=tf.nn.leaky_relu,
-                          bayesian=False, 
+                          bayesian=True, 
                           n_dense=1, swap_axes=True, BatchNorm=True
                           ):
     

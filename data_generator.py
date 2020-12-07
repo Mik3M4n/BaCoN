@@ -14,7 +14,6 @@ from utils import cut_sample, get_all_indexes, get_fname_list, find_nearest
 
 
 
-
 def generate_noise(k, P, 
                    add_shot=True,
                    add_sys=True,
@@ -38,20 +37,20 @@ def generate_noise(k, P,
 
 
 class DataGenerator(tf.compat.v2.keras.utils.Sequence):
-    def __init__(self, list_IDs, labels, labels_dict, 
-                 data_root = 'data/', batch_size=32, dim=(500, 4), n_channels=1,
+    def __init__(self, list_IDs, labels, labels_dict, batch_size=32, 
+                 data_root = 'data/', dim=(500, 4), n_channels=1,
                 shuffle=True, normalization='stdcosmo',
                 save_indexes=False, models_dir = 'models/MM/', idx_file_name = '_',
                  norm_data_name='/planck.txt',
                  sample_pace = 4, pad=False, 
                  Verbose=False, 
-                 k_max=None, i_max = None,
-                  add_noise=True, n_noisy_samples = 1, 
-                  add_shot=True, add_sys=True,sigma_sys=15,
+                 k_max=2.5, i_max = None,
+                  add_noise=True, n_noisy_samples = 10, 
+                  add_shot=True, add_sys=True, sigma_sys=5,
                   fine_tune = False, 
                   c_0=None, c_1=None, group_lab_dict=None, 
                   z_bins=[0, 1, 2, 3], swap_axes=False,
-                  dataset_balanced=True, test_mode=False,one_vs_all=False,
+                  dataset_balanced=False, test_mode=False, one_vs_all=False,
                  ):
       
         print('Data Generator Initialization')
@@ -81,7 +80,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.z_bins=np.asarray(z_bins, dtype=int)
         
         print('Using z bins %s' %z_bins)
-        #print(self.z_bins.shape[0])
         if not self.swap_axes:
             if self.z_bins.shape[0]!=self.dim[1]:
                 raise ValueError('Number of z bins does not match dimension 1 of the data.')
@@ -186,6 +184,11 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         else:
           self.n_noisy_samples = n_noisy_samples
         
+        
+        ######
+        # Consistency checks
+        ######
+        
         if not self.base_case_dataset:
             if self.batch_size%(self.n_classes*self.n_noisy_samples):
                 print('batch_size,n_classes, len(c_1), n_noisy_samples= %s, %s, %s, %s '%(self.batch_size, self.n_classes, len(self.c_1), self.n_noisy_samples))
@@ -204,12 +207,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             self.n_indexes = len(self.c_1)*self.batch_size//(self.n_classes*self.n_noisy_samples) #len(self.c_1)*
             print('batch_size, n_classes, len(self.c_1), n_noisy_samples= %s, %s, %s, %s' %(self.batch_size, self.n_classes, len(self.c_1), self.n_noisy_samples))
             print('n_indexes=len(self.c_1)*batch_size//(n_classes*n_noisy_samples)=%s' %self.n_indexes)
-            #if self.n_indexes<=len(self.c_0)+len(self.c_1):
-            #    print('n_indexes=%s' %self.n_indexes)
-            #    print('class 0 labels=%s' %len(self.c_0))
-            #    print('class 1 labels=%s' %len(self.c_1))
-            #    raise ValueError('Should have an index for each label in non_lcdm ') 
-            
+             
         else:
             if self.batch_size%(self.n_classes*self.n_noisy_samples)!=0:
                 print('Batch size = %s' %self.batch_size)
@@ -254,17 +252,13 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         
         
         if self.n_indexes!=len(list_IDs)/self.n_batches: 
-          #print('Batch size = %s' %self.batch_size)
-          #print('( n_labels x n_noisy_samples) = %s' %(self.n_classes*self.n_noisy_samples))
           print('length of IDs = %s' %str(len(list_IDs)))
           print('n_batches = %s' %self.n_batches)
           print('n_indexes = %s' %self.n_indexes)
           print('len(list_IDs)/self.n_batches = %s' %(len(list_IDs)/self.n_batches))
           raise ValueError('n_batches does not match length of IDs')
         self.Verbose=Verbose
-        #if len(self.list_IDs)==1:
-        #    self.Verbose=True
-        
+         
 
     def __len__(self):
         'Denotes the number of batches per epoch'
@@ -274,9 +268,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         'I dont know what exactly I should put here - where is n_channels ??? '
         return((len(self.list_IDs), self.dim[0]/self.sample_pace, self.dim[1] ))
 
-    #def shape(self):
-    #    return((len(self.list_IDs), self.dim[0]/self.sample_pace, self.dim[1]))    
-
+ 
     def __getitem__(self, index):
         'Generate one batch of data'
         self.batch_idx = index
@@ -308,7 +300,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             np.random.shuffle(self.indexes)
             for label in self.labels:
                 np.random.shuffle(self.indexes_dict[label])
-            #print('All indexes, permutation: %s' %self.indexes)
 
  
 
@@ -323,20 +314,15 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.Verbose:
             print('Dim of X: %s' %str(X.shape))
         # Generate data
-        #if self.Verbose:
-        #print('len of list IDs: %s ' %(len(list_IDs_temp)))
-        if not self.fine_tune and not self.one_vs_all:
+         if not self.fine_tune and not self.one_vs_all:
             fname_list=[]
             for l in self.labels:
                 for ID in list_IDs_temp_dict[l]:
                     t_st =  self.data_root + '/'+l+ '/'+ str(ID) + '.txt' 
                     fname_list.append(t_st)
             fname_list = np.array(fname_list)
-            #fname_list = np.array([self.data_root + '/'+l+ '/'+ str(ID) + '.txt' for ID in list_IDs_temp for l in self.labels])
         else:
-            #print(list_IDs_temp)
-            #print('__data_generation len(list_IDs_temp): %s' %len(list_IDs_temp))
-            fname_list = get_fname_list(self.c_0, self.c_1, list_IDs_temp, self.data_root,  list_IDs_temp_dict, dataset_balanced=self.dataset_balanced,)
+             fname_list = get_fname_list(self.c_0, self.c_1, list_IDs_temp, self.data_root,  list_IDs_temp_dict, dataset_balanced=self.dataset_balanced,)
         if self.fine_tune and self.Verbose :
             print(fname_list)
             
@@ -344,8 +330,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         assert len(fname_list)==self.batch_size//(self.n_noisy_samples)
         #print('N. of files used: %s' %fname_list.shape[0])
         #print('n_noisy_samples: %s' %self.n_noisy_samples)
-        #print(self.batch_size//(self.n_noisy_samples))        
-        #print(fname_list)
         for f_ind in range(len(fname_list)):            
             # Pick corresponding file from each folder 
               fname = fname_list[f_ind] 
@@ -372,7 +356,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     
               # Add noise
               for i_noise in range(self.n_noisy_samples):
-                #i_ind=f_ind+i_noise
                 if self.add_noise:
                   if self.Verbose:
                     print('Noise realization %s' %i_noise)
@@ -435,9 +418,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             else:
                 X = X/self.norm_data[None, :,:,None]-1
         
-        #if self.swap_axes:
-        #    X = np.swapaxes(X, 3, 2)[:,:,:,1:]
-
+   
         # shuffle to avoid having always three examples with different label in a row
         if self.shuffle:
           p = np.random.permutation(X.shape[0])
@@ -452,7 +433,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
               os.makedirs(self.models_dir+'/idx_files/')
             
           idx_file = self.models_dir+'/idx_files/idx_file_batch'+ str(self.batch_idx)+'.txt'                  
-          #label_list = [f.split('/')[2] for f in fname_list]
           print('Saving indexes in  %s' %idx_file)
           idx_list = [f.split('.')[0].split('/')[-2]+'/'+f.split('.')[0].split('/')[-1]  for f in fname_list_shuffled]
           self.save_indexes_dict[self.batch_idx] = idx_list
@@ -462,17 +442,10 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
               for i, idx in enumerate(idx_list): #i in range(len(idx_list)):
                   file.write(idx+'\n')
        
+   
+        if self.swap_axes:# 
+            X = X[:,:,0,:] 
 
-        #print('Seen in this batch: ')
-        #print(list_IDs_temp)
-    
-        if self.swap_axes:# and self.z_bins.shape[0]>1:
-            X = X[:,:,0,:] #np.squeeze(X)
-        #elif self.swap_axes:
-        #    X = X[:,:,0,:]
-                
-        #if self.test_mode:
-        #    X = tf.expand_dims(X, axis=0)
         return X, tf.keras.utils.to_categorical(y, num_classes=self.n_classes_out)
     
 
@@ -495,6 +468,7 @@ def read_partition(FLAGS):
     return partition
     
     
+
 def create_generators(FLAGS):
     
     
@@ -584,14 +558,7 @@ def create_generators(FLAGS):
     if FLAGS.restore:
         partition = read_partition(FLAGS)
         batch_size=FLAGS.batch_size
-    #else:
-    #    partition, batch_size = make_partition(FLAGS)
-    
-    #if FLAGS.add_noise:
-    #    n_noisy_samples = FLAGS.n_noisy_samples
-    #else:
-    #    n_noisy_samples = 1
-        
+         
     ###################
     # USE THE BLOCH BELOW TO BE COMPATIBLE WITH OLDER VERSIONS OF DARTA GENERATORS. EVENTUALLY REMOVE
     ###################
