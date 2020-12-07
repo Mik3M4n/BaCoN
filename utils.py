@@ -261,21 +261,6 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
         
         
-class Unbuffered(object):
-
-   def __init__(self, stream, te):
-
-       self.stream = stream
-       self.te=te
-
-   def write(self, data):
-
-       self.stream.write(data)
-       self.stream.flush()
-       self.te.write(data)    # Write the data of stdout here to a text file as well
-       
-   def flush(self):
-        self.stream.flush()  
         
         
 def parse_flags(FLAGS):

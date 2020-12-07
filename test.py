@@ -20,15 +20,17 @@ from utils import DummyHist, plot_hist, str2bool, get_flags
 from train import ELBO, my_loss
 
 
-def load_model_for_test(FLAGS, input_shape, n_classes=5, generator=None, FLAGS_ORIGINAL=None, new_fname=None):
+def load_model_for_test(FLAGS, input_shape, n_classes=5,
+                        generator=None, FLAGS_ORIGINAL=None, new_fname=None):
          
 
     
     print('------------ BUILDING MODEL ------------\n')
     
     print('Model n_classes : %s ' %n_classes)
-    print('Features shape: %s' %str(generator[0][0].shape))
-    print('Labels shape: %s' %str(generator[0][1].shape))
+    if generator is not None:
+        print('Features shape: %s' %str(generator[0][0].shape))
+        print('Labels shape: %s' %str(generator[0][1].shape))
     
     try:
         BatchNorm=FLAGS.BatchNorm
@@ -212,7 +214,9 @@ def evaluate_accuracy(model, test_generator, out_path, names=None, FLAGS=None):
 
 
 def predict_bayes_label(mean_prob, th_prob=0.5):
-  if mean_prob[mean_prob>th_prob].numpy().sum()==0.:
+  if type(mean_prob) is not np.ndarray:
+      mean_prob=mean_prob.numpy()
+  if mean_prob[mean_prob>th_prob].sum()==0.:
       pred_label = 99
   else:
       pred_label = tf.argmax(mean_prob).numpy()

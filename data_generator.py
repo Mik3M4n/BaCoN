@@ -314,7 +314,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.Verbose:
             print('Dim of X: %s' %str(X.shape))
         # Generate data
-         if not self.fine_tune and not self.one_vs_all:
+        if not self.fine_tune and not self.one_vs_all:
             fname_list=[]
             for l in self.labels:
                 for ID in list_IDs_temp_dict[l]:

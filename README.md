@@ -36,7 +36,9 @@ Furthermore, we provide scripts to generate the "random" class spectra with the 
 ## Data
 
 ### Data folders
-Data should be put inside the main repository folder. Its organisation should be as follows:
+
+The data used to train this network are available at [this link](https://doi.org/10.5281/zenodo.4309918). 
+They should be downloaded in the ```data/``` folder. Its organisation should look as follows:
 ```bash
 data/train_data/
 		├── dgp/
@@ -61,11 +63,11 @@ data/train_data/
 			├──...	
 		└── planck.txt		
 ```
-and sililarly for the test data that should be put in a directory ```test_data``` inside ```data/```.
+and similarly for the test data that should be put in a directory ```test_data``` inside ```data/```.
 The file names in each folder must have the same indexing, ranging from 1 to the number of training/test examples for each label. Note that despite the names, data in each folder should be uncorrelated. Nonetheless, the data generator shuffles the indexes so that different indexes in different folders are used when producing a batch, in order to further prevent any spurious correlation that may arise when generating data.
 Scripts to generate the data as well as to correctly re-index are available in ```scripts```.
 The data generator will automatically check the data folder and assign labels corresponding to the subfolders' names. At test time, make sure that the test data folder has the same names as the training set in order not to run into errors.
-The file ```planck.txt``` contains the reference power spectrum used to normalize the input to the network.
+The file ```planck.txt``` contains the reference power spectrum used to normalize the input to the network. We provide it inside the data and in the folder data/example_spectra/ in this repository in order to use the examples.
 
 ### Data generator
 
@@ -143,7 +145,7 @@ At the end of training, the ouput folder will contain:
 * a plot of the learning curves (training and validation accuracies and losses) in ```hist.png```.
 *  a subfolder tf_ckpts containing:
 	* 	 the checkpoints of the models 
-	* 	  four .txt files with the history of test and validation accuracies and losses, namely:
+	* 	  four ```.txt``` files with the history of test and validation accuracies and losses, namely:
 		* hist_accuracy.txt : training accuracy
 		* hist_val\_accuracies.txt: validation accuracy
 		* hist_loss.txt: training loss
@@ -184,10 +186,9 @@ test.py [-h] --log_path LOG_PATH [--TEST_DIR TEST_DIR]
 
 #### Output
 
-### Classification
+### 4 - Classification
 
 ## Examples
-
 
 ## Adding cosmologies
 
