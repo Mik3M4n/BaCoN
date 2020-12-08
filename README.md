@@ -15,7 +15,7 @@ Please contact <Michele.Mancarella@unige.ch> for further questions.
 
 
 * [Citation](https://github.com/Mik3M4n/BaCoN#citation)
-* [Overview and code organisation](https://github.com/Mik3M4n/BaCoN#Overview and code organisation)
+* [Overview and code organisation](https://github.com/Mik3M4n/BaCoN#Overview-and-code-organisation)
 * [Data](https://github.com/Mik3M4n/BaCoN#Data)
 	* [Data folders](https://github.com/Mik3M4n/BaCoN#Data-folders)
 	*  [Data format](https://github.com/Mik3M4n/BaCoN#Data-format)
