@@ -2,7 +2,7 @@
 This package allows to train and test Bayesian Convolutional Neural Networks in order to **classify dark matter power spectra as being representative of different cosmologies**, as well as to compute the classification confidence. 
 The code now supports the following theories:  **LCDM, wCDM, f(R), DGP, and a randomly generated class** (see the reference for details). Additional cosmologies can be easily added (see the dedicated section).
 
-**We also provide a jupyter notebook that allows to load the pre-trained model, classify any matter power spectrum and compute the classification confidence with the method described in the paper (see [4 - Classification](### 4 - Classification)). This only requires the raw values of the power spectrum. Feedback on the results of classification is particularly welcome!**
+**We also provide a jupyter notebook that allows to load the pre-trained model, classify any matter power spectrum and compute the classification confidence with the method described in the paper (see [4 - Classification](https://github.com/Mik3M4n/BaCoN#4---Classification)). This only requires the raw values of the power spectrum. Feedback on the results of classification is particularly welcome!**
 
 If you have a code that generates power spectra of modified gravity theories up to k>=2.5 h Mpc^_1, get in touch ;)
 
@@ -15,22 +15,22 @@ Please contact <Michele.Mancarella@unige.ch> for further questions.
 
 
 * [Citation](https://github.com/Mik3M4n/BaCoN#citation)
-* [Overview and code organisation](## Overview and code organisation)
-* [Data](## Data)
-	* [Data folders](### Data folders)
-	*  [Data format](### Data format)
-	*  [Data generator](### Data generator)
-* [Usage](## Usage)
-	* [1a - Training five-label networks](### 1a - Training five-label networks)
-	* [1b - Training two-label networks](### 1b - Training two-label networks)
-	* [1c - Training specialist networks](### 1c - Training specialist networks)
-	* [1d - Training custom networks](### 1d - Training custom networks)
-	* [Output](### Output)
-	* [2 - Fine-tuning](### 2 - Fine-tuning)
-	* [3 - Testing](### 3 - Testing)
-	* [4 - Classification](### 4 - Classification)
-* [Adding cosmologies](## Adding cosmologies)
-* [Modifying the code](## Modifying the code)
+* [Overview and code organisation](https://github.com/Mik3M4n/BaCoN#Overview and code organisation)
+* [Data](https://github.com/Mik3M4n/BaCoN#Data)
+	* [Data folders](https://github.com/Mik3M4n/BaCoN#Data-folders)
+	*  [Data format](https://github.com/Mik3M4n/BaCoN#Data-format)
+	*  [Data generator](https://github.com/Mik3M4n/BaCoN#Data-generator)
+* [Usage](https://github.com/Mik3M4n/BaCoN#Usage)
+	* [1a - Training five-label networks](https://github.com/Mik3M4n/BaCoN#1a---Training-five-label-networks)
+	* [1b - Training two-label networks](https://github.com/Mik3M4n/BaCoN#1b---Training-two-label-networks)
+	* [1c - Training specialist networks](https://github.com/Mik3M4n/BaCoN#1c---Training-specialist-networks)
+	* [1d - Training custom networks](https://github.com/Mik3M4n/BaCoN#1d---Training-custom-networks)
+	* [Output](https://github.com/Mik3M4n/BaCoN#Output)
+	* [2 - Fine-tuning](https://github.com/Mik3M4n/BaCoN#2---Fine-tuning)
+	* [3 - Testing](https://github.com/Mik3M4n/BaCoN#3---Testing)
+	* [4 - Classification](https://github.com/Mik3M4n/BaCoN#4---Classification)
+* [Adding cosmologies](https://github.com/Mik3M4n/BaCoN#Adding-cosmologies)
+* [Modifying the code](https://github.com/Mik3M4n/BaCoN#Modifying-the-code)
 
 ## Citation
 This package is released together with the paper [Seeking New Physics in Cosmology with Bayesian Neural Networks I: Dark Energy and Modified Gravity](). When making use of it, please cite the paper and the present git repository. Bibtex:
