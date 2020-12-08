@@ -1,30 +1,46 @@
 # BaCoN (BAyesian COsmological Network)
-This package allows to train and test a Bayesian Convolutional Neural Network in order to **classify dark matter power spectra as being representative of different cosmologies**, as well as to compute the classification confidence. The methods and results can be found in the paper [Seeking New Physics in Cosmology with Bayesian Neural Networks I: Dark Energy and Modified Gravity](). Please contact Michele.Mancarella at unige dot ch for further questions.
+This package allows to train and test Bayesian Convolutional Neural Networks in order to **classify dark matter power spectra as being representative of different cosmologies**, as well as to compute the classification confidence. 
+The code now supports the following theories:  **LCDM, wCDM, f(R), DGP, and a randomly generated class** (see the reference for details). Additional cosmologies can be easily added (see the dedicated section).
 
-
-The two base models are trained on five different categories: **LCDM, wCDM, f(R), DGP, and a randomly generated spectrum** (see the reference for details). Additional cosmologies can be easily added (see the dedicated section). The first base model is a five-label classifier with LCDM, wCDM, f(R), DGP, and "random" as classes, while the second is a two-label classifier with classes **LCDM and non-LCDM**.
-
-On top of the five-labels classifier, a fine-tuning procedure is also available, in order to adapt the five-label network to LCDM and non-LCDM classes only. This can be useful in the search for new physics, irrespectively of the underlying alternative model, if one wants to add theories that are not included in the five labels network without re-training from scratch. The fine-tuning starts from a model pre-trained on the 5 labels task, replacing the final, 5-dimensional output with a two dimensional output layer.
-
-Details on training, data preparation, variations ot the base model, and extensions are available in the dedicated sections. The Bayesian implementation uses [Tensorflow probability](https://www.tensorflow.org/probability) with [Convolutional](https://www.tensorflow.org/probability/api_docs/python/tfp/layers/Convolution1DFlipout) and [DenseFlipout](https://www.tensorflow.org/probability/api_docs/python/tfp/layers/DenseFlipout) methods.
-
-**We also provide a jupyter notebook that allows to load the pre-trained model, classify any matter power spectrum and compute the classification confidence with the method described in the paper. This only requires the raw values of the power spectrum. Feedback on the results of classification is particularly welcome!** 
+**We also provide a jupyter notebook that allows to load the pre-trained model, classify any matter power spectrum and compute the classification confidence with the method described in the paper (see [4 - Classification](### 4 - Classification)). This only requires the raw values of the power spectrum. Feedback on the results of classification is particularly welcome!**
 
 If you have a code that generates power spectra of modified gravity theories up to k>=2.5 h Mpc^_1, get in touch ;)
 
-Please also refer to the paper for further details.
+The methods and results can be found in the paper [Seeking New Physics in Cosmology with Bayesian Neural Networks I: Dark Energy and Modified Gravity](). 
 
+Please contact <Michele.Mancarella@unige.ch> for further questions.
+
+
+## Summary
+
+
+* [Citation](## Citation)
+* [Overview and code organisation](## Overview and code organisation)
+* [Data](## Data)
+	* [Data folders](### Data folders)
+	*  [Data format](### Data format)
+	*  [Data generator](### Data generator)
+* [Usage](## Usage)
+	* [1a - Training five-label networks](### 1a - Training five-label networks)
+	* [1b - Training two-label networks](### 1b - Training two-label networks)
+	* [1c - Training specialist networks](### 1c - Training specialist networks)
+	* [1d - Training custom networks](### 1d - Training custom networks)
+	* [Output](### Output)
+	* [2 - Fine-tuning](### 2 - Fine-tuning)
+	* [3 - Testing](### 3 - Testing)
+	* [4 - Classification](### 4 - Classification)
+* [Adding cosmologies](## Adding cosmologies)
+* [Modifying the code](## Modifying the code)
 
 ## Citation
 This package is released together with the paper [Seeking New Physics in Cosmology with Bayesian Neural Networks I: Dark Energy and Modified Gravity](). When making use of it, please cite the paper and the present git repository. Bibtex:
 
 
 
-
 ## Overview and code organisation
 
 
-This package provides the following modules:
+The package provides the following modules:
 
 * ```data generator.py```: data generator that generates batches of data. Data are dark matter power spectra normalised to the Planck LCDM cosmology, in the redshift bins (0.1,0.478,0.783,1.5) and k in the range 0.01-2.5 h Mpc^-1.
 * ```models.py``` : contains models' architecture
@@ -34,6 +50,16 @@ This package provides the following modules:
 A jupyter notebook to classify power spectra with pre-trained weights and computing the confidence in classification is available in ```notebooks/```. Pre-trained models are available in ```models/```.
 
 Furthermore, we provide scripts to generate the "random" class spectra with the algorithm described in the paper, as well as scripts to generate datasets with the publicly available code [```ReACT```](https://github.com/nebblu/ReACT) in the folder ```scripts/```.
+
+We include two pre-trained models.
+
+The first base model is a five-label classifier with LCDM, wCDM, f(R), DGP, and "random" as classes, while the second is a two-label classifier with classes LCDM and non-LCDM.
+
+On top of the five-labels classifier, a fine-tuning procedure is also available, in order to adapt the five-label network to LCDM and non-LCDM classes only. This can be useful in the search for new physics, irrespectively of the underlying alternative model, if one wants to add theories that are not included in the five labels network without re-training from scratch. The fine-tuning starts from a model pre-trained on the 5 labels task, replacing the final, 5-dimensional output with a two dimensional output layer.
+
+Details on training, data preparation, variations ot the base model, and extensions are available in the dedicated sections. The Bayesian implementation uses [Tensorflow probability](https://www.tensorflow.org/probability) with [Convolutional](https://www.tensorflow.org/probability/api_docs/python/tfp/layers/Convolution1DFlipout) and [DenseFlipout](https://www.tensorflow.org/probability/api_docs/python/tfp/layers/DenseFlipout) methods.
+
+
 
 ## Data
 
