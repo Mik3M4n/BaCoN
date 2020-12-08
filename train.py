@@ -251,7 +251,7 @@ def main():
     # FNAMES ETC
     parser.add_argument("--fname", default='my_model', type=str, required=False)
     parser.add_argument("--model_name", default='custom', type=str, required=False)
-    parser.add_argument("--my_path", default='', type=str, required=False)
+    parser.add_argument("--my_path", default=None, type=str, required=False)
     parser.add_argument("--DIR", default='data/train_data/', type=str, required=False)
     parser.add_argument("--TEST_DIR", default='data/test_data/', type=str, required=False)  
     parser.add_argument("--models_dir", default='models/', type=str, required=False)
@@ -369,7 +369,7 @@ def main():
             add_ckpt_name = ''
             temp_dict={ label:'non_lcdm' for label in FLAGS.c_1}
         else:
-            # training tuning 1vs 1
+            # training  1vs 1
             temp_dict={ label:label for label in FLAGS.c_1}
             add_ckpt_name = '_'+('-').join(FLAGS.c_1)+'vs'+('-').join(FLAGS.c_0)
         out_path = FLAGS.models_dir+FLAGS.fname
@@ -387,6 +387,7 @@ def main():
     if FLAGS.test_mode and not FLAGS.fine_tune:
         out_path=out_path+'_test'
         
+    
     ###
     # Uncomment the parts below to redirect output to file. 
     # Does not work on Google Colab
@@ -398,6 +399,12 @@ def main():
     else:
        print('Directory %s not created' %out_path)
     
+    
+    logfile = os.path.join(out_path, FLAGS.fname+'_log.txt')
+    myLog = Logger(logfile)
+    sys.stdout = myLog
+    
+    
     #with open(out_path+'/params.txt', 'w') as fpar:    
     #    print('Opened params file %s. Writing params' %(out_path+'/params.txt'))
     print('\n -------- Parameters:')
@@ -405,9 +412,7 @@ def main():
             print (key,value)
         #    fpar.write(' : '.join([str(key), str(value)])+'\n')
     
-    logfile = os.path.join(out_path, FLAGS.fname+'_log.txt')
-    myLog = Logger(logfile)
-    sys.stdout = myLog
+
 
     
     

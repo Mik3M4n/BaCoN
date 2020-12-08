@@ -227,11 +227,11 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
 class Logger(object):
     
     def __init__(self, fname):
+        print('Logger creating log file: %s' %fname)
         self.terminal = sys.__stdout__
         self.log = open(fname, "w+")
-        self.log.write('--------- LOG FILE ---------\n')
-        print('Logger created log file: %s' %fname)
-        self.write('Prova Logger')
+        #self.log.write('--------- LOG FILE ---------\n')   
+        #self.write('Prova Logger')
        
     def write(self, message):
         self.terminal.write(message)

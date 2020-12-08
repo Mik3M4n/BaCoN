@@ -1,0 +1,340 @@
+Reading log from /content/drive/My Drive/ML_REACT/models/MM/bayes_2/2210_MM_1_log.txt 
+
+ -------- Loaded parameters:
+bayesian True
+test_mode False
+n_test_idx 2
+seed 1511
+fine_tune False
+one_vs_all False
+c_0 ['lcdm']
+c_1 ['dgp', 'fR', 'rand', 'wcdm']
+dataset_balanced False
+include_last False
+log_path 
+restore False
+fname 2210_MM_1
+model_name custom
+my_path /content
+DIR Train_data_full
+TEST_DIR data/test_data/new_test_data
+models_dir /content/drive/My Drive/ML_REACT/models/MM/bayes_2/
+save_ckpt True
+out_path_overwrite False
+im_depth 500
+im_width 1
+im_channels 4
+swap_axes True
+sort_labels True
+normalization stdcosmo
+sample_pace 4
+k_max 2.5
+i_max None
+add_noise True
+n_noisy_samples 10
+add_shot True
+add_sys True
+sigma_sys 5.0
+z_bins [0, 1, 2, 3]
+n_dense 1
+filters [8, 16, 32]
+kernel_sizes [10, 5, 2]
+strides [2, 2, 1]
+pool_sizes [2, 2, 0]
+strides_pooling [2, 1, 0]
+add_FT_dense False
+trainable False
+unfreeze False
+lr 0.01
+drop 0.5
+n_epochs 70
+val_size 0.15
+test_size 0.0
+batch_size 2500
+patience 100
+GPU True
+decay 0.95
+BatchNorm True
+group_lab_dict {'dgp': 'non_lcdm', 'fR': 'non_lcdm', 'rand': 'non_lcdm', 'wcdm': 'non_lcdm', 'lcdm': 'lcdm'}
+FLAGS.one_vs_all : False
+Setting save_indexes to False
+Using data in the directory test_sup
+Reading model from the directory /content/drive/My Drive/ML_REACT/models/MM/bayes_2/
+Using batch_size 2500
+Overwriting noise flags. Using n_noisy_samples=10, add_shot=True, add_sys=True, sigma_sys=5.0
+
+ -------- Parameters:
+bayesian True
+test_mode False
+n_test_idx 2
+seed 1511
+fine_tune False
+one_vs_all False
+c_0 ['lcdm']
+c_1 ['dgp', 'fR', 'rand', 'wcdm']
+dataset_balanced False
+include_last False
+log_path 
+restore False
+fname 2210_MM_1
+model_name custom
+my_path /content
+DIR Train_data_full
+TEST_DIR test_sup
+models_dir /content/drive/My Drive/ML_REACT/models/MM/bayes_2/
+save_ckpt True
+out_path_overwrite False
+im_depth 500
+im_width 1
+im_channels 4
+swap_axes True
+sort_labels True
+normalization stdcosmo
+sample_pace 4
+k_max 2.5
+i_max None
+add_noise True
+n_noisy_samples 10
+add_shot True
+add_sys True
+sigma_sys 5.0
+z_bins [0, 1, 2, 3]
+n_dense 1
+filters [8, 16, 32]
+kernel_sizes [10, 5, 2]
+strides [2, 2, 1]
+pool_sizes [2, 2, 0]
+strides_pooling [2, 1, 0]
+add_FT_dense False
+trainable False
+unfreeze False
+lr 0.01
+drop 0.5
+n_epochs 70
+val_size 0.15
+test_size 0.0
+batch_size 2500
+patience 100
+GPU True
+decay 0.95
+BatchNorm True
+group_lab_dict {'dgp': 'non_lcdm', 'fR': 'non_lcdm', 'rand': 'non_lcdm', 'wcdm': 'non_lcdm', 'lcdm': 'lcdm'}
+save_indexes False
+------------ CREATING DATA GENERATORS ------------
+
+Changing directory to /content
+labels : ['dgp', 'fR', 'lcdm', 'rand', 'wcdm']
+Labels encoding: 
+{'dgp': 0, 'fR': 1, 'lcdm': 2, 'rand': 3, 'wcdm': 4}
+n_labels : 5
+dgp - 2500 training examples
+fR - 2500 training examples
+lcdm - 2500 training examples
+rand - 2500 training examples
+wcdm - 2500 training examples
+
+N. of data files: 2500
+get_all_indexes labels dict: {'dgp': 0, 'fR': 1, 'lcdm': 2, 'rand': 3, 'wcdm': 4}
+--Train
+batch_size: 2500
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+Indexes length: 2500
+n_keep: 2500
+Not sampling
+New length: 2500
+N batches: 50.0
+ len_C1: 1
+N indexes: 50.0
+Ok.
+N. of test files used: 2500
+Data Generator Initialization
+Using z bins [0, 1, 2, 3]
+Specified k_max is 2.5
+Corresponding i_max is 100
+Closest k to k_max is 2.539859
+New data dim: (100, 1)
+Final i_max used is 100
+one_vs_all: False
+dataset_balanced: True
+N. classes: 5
+N. n_classes in output: 5
+list_IDs length: 2500
+n_indexes (n of file IDs read for each batch): 50
+batch size: 2500
+n_batches : 50
+For each batch we read 50 file IDs
+For each file ID we have 5 labels
+For each ID, label we have 10 realizations of noise
+In total, for each batch we have 2500 training examples
+Input batch size: 2500
+N of batches to cover all file IDs: 50
+------------ DONE ------------
+
+Input shape (100, 4)
+------------ BUILDING MODEL ------------
+
+Model n_classes : 5 
+Features shape: (2500, 100, 4)
+Labels shape: (2500, 5)
+using 1D layers and 4 channels
+Expected output dimension of layer conv1d_flipout: 46.0
+Expected output dimension of layer max_pooling1d: 23.0
+Expected output dimension of layer conv1d_flipout_1: 10.0
+Expected output dimension of layer max_pooling1d_1: 9.0
+Expected output dimension of layer conv1d_flipout_2: 8.0
+Model: "functional_1"
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+input_1 (InputLayer)         [(None, 100, 4)]          0         
+_________________________________________________________________
+conv1d_flipout (Conv1DFlipou (None, 46, 8)             648       
+_________________________________________________________________
+max_pooling1d (MaxPooling1D) (None, 23, 8)             0         
+_________________________________________________________________
+batch_normalization (BatchNo (None, 23, 8)             32        
+_________________________________________________________________
+conv1d_flipout_1 (Conv1DFlip (None, 10, 16)            1296      
+_________________________________________________________________
+max_pooling1d_1 (MaxPooling1 (None, 9, 16)             0         
+_________________________________________________________________
+batch_normalization_1 (Batch (None, 9, 16)             64        
+_________________________________________________________________
+conv1d_flipout_2 (Conv1DFlip (None, 8, 32)             2080      
+_________________________________________________________________
+batch_normalization_2 (Batch (None, 8, 32)             128       
+_________________________________________________________________
+global_average_pooling1d (Gl (None, 32)                0         
+_________________________________________________________________
+dense_flipout (DenseFlipout) (None, 32)                2080      
+_________________________________________________________________
+batch_normalization_3 (Batch (None, 32)                128       
+_________________________________________________________________
+dense_flipout_1 (DenseFlipou (None, 5)                 325       
+=================================================================
+Total params: 6,781
+Trainable params: 6,605
+Non-trainable params: 176
+_________________________________________________________________
+None
+Computing loss for randomly initialized model...
+Loss before loading weights/ 1.6769438
+
+------------ RESTORING CHECKPOINT ------------
+
+Looking for ckpt in /content/drive/My Drive/ML_REACT/models/MM/bayes_2/2210_MM_1/tf_ckpts/
+Restoring checkpoint from /content/drive/My Drive/ML_REACT/models/MM/bayes_2/2210_MM_1/tf_ckpts/ckpt-35
+Loss after loading weights/ 0.27125028
+
+Threshold probability for classification: 0.5 
+Accuracy on 0 batch using median of sampled probabilities: 0.9372 %
+Accuracy on 0 batch using median of sampled probabilities, not considering unclassified examples: 0.94437724 %
+Accuracy on 1 batch using median of sampled probabilities: 0.9308 %
+Accuracy on 1 batch using median of sampled probabilities, not considering unclassified examples: 0.93604183 %
+Accuracy on 2 batch using median of sampled probabilities: 0.9336 %
+Accuracy on 2 batch using median of sampled probabilities, not considering unclassified examples: 0.937726 %
+Accuracy on 3 batch using median of sampled probabilities: 0.9624 %
+Accuracy on 3 batch using median of sampled probabilities, not considering unclassified examples: 0.96548957 %
+Accuracy on 4 batch using median of sampled probabilities: 0.954 %
+Accuracy on 4 batch using median of sampled probabilities, not considering unclassified examples: 0.9566787 %
+Accuracy on 5 batch using median of sampled probabilities: 0.936 %
+Accuracy on 5 batch using median of sampled probabilities, not considering unclassified examples: 0.943929 %
+Accuracy on 6 batch using median of sampled probabilities: 0.9376 %
+Accuracy on 6 batch using median of sampled probabilities, not considering unclassified examples: 0.9486038 %
+Accuracy on 7 batch using median of sampled probabilities: 0.9572 %
+Accuracy on 7 batch using median of sampled probabilities, not considering unclassified examples: 0.9606584 %
+Accuracy on 8 batch using median of sampled probabilities: 0.9612 %
+Accuracy on 8 batch using median of sampled probabilities, not considering unclassified examples: 0.96428573 %
+Accuracy on 9 batch using median of sampled probabilities: 0.9492 %
+Accuracy on 9 batch using median of sampled probabilities, not considering unclassified examples: 0.9556987 %
+Accuracy on 10 batch using median of sampled probabilities: 0.9516 %
+Accuracy on 10 batch using median of sampled probabilities, not considering unclassified examples: 0.95695895 %
+Accuracy on 11 batch using median of sampled probabilities: 0.9508 %
+Accuracy on 11 batch using median of sampled probabilities, not considering unclassified examples: 0.95461845 %
+Accuracy on 12 batch using median of sampled probabilities: 0.9608 %
+Accuracy on 12 batch using median of sampled probabilities, not considering unclassified examples: 0.96311146 %
+Accuracy on 13 batch using median of sampled probabilities: 0.9536 %
+Accuracy on 13 batch using median of sampled probabilities, not considering unclassified examples: 0.95858467 %
+Accuracy on 14 batch using median of sampled probabilities: 0.936 %
+Accuracy on 14 batch using median of sampled probabilities, not considering unclassified examples: 0.9446912 %
+Accuracy on 15 batch using median of sampled probabilities: 0.948 %
+Accuracy on 15 batch using median of sampled probabilities, not considering unclassified examples: 0.95142514 %
+Accuracy on 16 batch using median of sampled probabilities: 0.9572 %
+Accuracy on 16 batch using median of sampled probabilities, not considering unclassified examples: 0.96220344 %
+Accuracy on 17 batch using median of sampled probabilities: 0.9404 %
+Accuracy on 17 batch using median of sampled probabilities, not considering unclassified examples: 0.94531566 %
+Accuracy on 18 batch using median of sampled probabilities: 0.9536 %
+Accuracy on 18 batch using median of sampled probabilities, not considering unclassified examples: 0.9636217 %
+Accuracy on 19 batch using median of sampled probabilities: 0.9296 %
+Accuracy on 19 batch using median of sampled probabilities, not considering unclassified examples: 0.93558776 %
+Accuracy on 20 batch using median of sampled probabilities: 0.9624 %
+Accuracy on 20 batch using median of sampled probabilities, not considering unclassified examples: 0.9666533 %
+Accuracy on 21 batch using median of sampled probabilities: 0.9588 %
+Accuracy on 21 batch using median of sampled probabilities, not considering unclassified examples: 0.961878 %
+Accuracy on 22 batch using median of sampled probabilities: 0.9628 %
+Accuracy on 22 batch using median of sampled probabilities, not considering unclassified examples: 0.96434295 %
+Accuracy on 23 batch using median of sampled probabilities: 0.9672 %
+Accuracy on 23 batch using median of sampled probabilities, not considering unclassified examples: 0.9722557 %
+Accuracy on 24 batch using median of sampled probabilities: 0.9488 %
+Accuracy on 24 batch using median of sampled probabilities, not considering unclassified examples: 0.95337623 %
+Accuracy on 25 batch using median of sampled probabilities: 0.9728 %
+Accuracy on 25 batch using median of sampled probabilities, not considering unclassified examples: 0.978672 %
+Accuracy on 26 batch using median of sampled probabilities: 0.9496 %
+Accuracy on 26 batch using median of sampled probabilities, not considering unclassified examples: 0.9557166 %
+Accuracy on 27 batch using median of sampled probabilities: 0.9412 %
+Accuracy on 27 batch using median of sampled probabilities, not considering unclassified examples: 0.94611984 %
+Accuracy on 28 batch using median of sampled probabilities: 0.9372 %
+Accuracy on 28 batch using median of sampled probabilities, not considering unclassified examples: 0.9402087 %
+Accuracy on 29 batch using median of sampled probabilities: 0.9524 %
+Accuracy on 29 batch using median of sampled probabilities, not considering unclassified examples: 0.9624091 %
+Accuracy on 30 batch using median of sampled probabilities: 0.938 %
+Accuracy on 30 batch using median of sampled probabilities, not considering unclassified examples: 0.9417671 %
+Accuracy on 31 batch using median of sampled probabilities: 0.928 %
+Accuracy on 31 batch using median of sampled probabilities, not considering unclassified examples: 0.93247586 %
+Accuracy on 32 batch using median of sampled probabilities: 0.9652 %
+Accuracy on 32 batch using median of sampled probabilities, not considering unclassified examples: 0.9686873 %
+Accuracy on 33 batch using median of sampled probabilities: 0.9624 %
+Accuracy on 33 batch using median of sampled probabilities, not considering unclassified examples: 0.96743065 %
+Accuracy on 34 batch using median of sampled probabilities: 0.964 %
+Accuracy on 34 batch using median of sampled probabilities, not considering unclassified examples: 0.96670675 %
+Accuracy on 35 batch using median of sampled probabilities: 0.9428 %
+Accuracy on 35 batch using median of sampled probabilities, not considering unclassified examples: 0.9496374 %
+Accuracy on 36 batch using median of sampled probabilities: 0.9496 %
+Accuracy on 36 batch using median of sampled probabilities, not considering unclassified examples: 0.9564867 %
+Accuracy on 37 batch using median of sampled probabilities: 0.9312 %
+Accuracy on 37 batch using median of sampled probabilities, not considering unclassified examples: 0.9360675 %
+Accuracy on 38 batch using median of sampled probabilities: 0.94 %
+Accuracy on 38 batch using median of sampled probabilities, not considering unclassified examples: 0.9468171 %
+Accuracy on 39 batch using median of sampled probabilities: 0.9592 %
+Accuracy on 39 batch using median of sampled probabilities, not considering unclassified examples: 0.9657672 %
+Accuracy on 40 batch using median of sampled probabilities: 0.9488 %
+Accuracy on 40 batch using median of sampled probabilities, not considering unclassified examples: 0.9514641 %
+Accuracy on 41 batch using median of sampled probabilities: 0.9412 %
+Accuracy on 41 batch using median of sampled probabilities, not considering unclassified examples: 0.94726247 %
+Accuracy on 42 batch using median of sampled probabilities: 0.9532 %
+Accuracy on 42 batch using median of sampled probabilities, not considering unclassified examples: 0.9612747 %
+Accuracy on 43 batch using median of sampled probabilities: 0.9548 %
+Accuracy on 43 batch using median of sampled probabilities, not considering unclassified examples: 0.95709705 %
+Accuracy on 44 batch using median of sampled probabilities: 0.9376 %
+Accuracy on 44 batch using median of sampled probabilities, not considering unclassified examples: 0.94783664 %
+Accuracy on 45 batch using median of sampled probabilities: 0.946 %
+Accuracy on 45 batch using median of sampled probabilities, not considering unclassified examples: 0.95132744 %
+Accuracy on 46 batch using median of sampled probabilities: 0.9672 %
+Accuracy on 46 batch using median of sampled probabilities, not considering unclassified examples: 0.9706945 %
+Accuracy on 47 batch using median of sampled probabilities: 0.9568 %
+Accuracy on 47 batch using median of sampled probabilities, not considering unclassified examples: 0.9614148 %
+Accuracy on 48 batch using median of sampled probabilities: 0.9516 %
+Accuracy on 48 batch using median of sampled probabilities, not considering unclassified examples: 0.95811516 %
+Accuracy on 49 batch using median of sampled probabilities: 0.9528 %
+Accuracy on 49 batch using median of sampled probabilities, not considering unclassified examples: 0.9577805 %
+-- Accuracy on test set using median of sampled probabilities: 0.9496879 % 
+
+-- Accuracy on test set using median of sampled probabilities, not considering unclassified examples: 24.197678 % 
+
+Adding Not classified label
+Saved confusion matrix at /content/drive/My Drive/ML_REACT/models/MM/bayes_2/2210_MM_1/cm_frozen_weights.pdf
+Saved confusion matrix values at /content/drive/My Drive/ML_REACT/models/MM/bayes_2/2210_MM_1/cm_frozen_weights_values.txt

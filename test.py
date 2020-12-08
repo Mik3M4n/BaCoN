@@ -304,14 +304,13 @@ def main():
     
     parser = argparse.ArgumentParser()
     parser.add_argument("--log_path", default='', type=str, required=True)
-    parser.add_argument("--TEST_DIR", default=None, type=str, required=False)
-    parser.add_argument("--models_dir", default=None, type=str, required=False)
+    parser.add_argument("--TEST_DIR", default='data/test_data/', type=str, required=False)
+    parser.add_argument("--models_dir", default='models/', type=str, required=False)
     
-    parser.add_argument("--n_monte_carlo_samples", default=50, type=int, required=False)
+    parser.add_argument("--n_monte_carlo_samples", default=100, type=int, required=False)
     parser.add_argument("--th_prob", default=0.5, type=float, required=False)
     
     parser.add_argument("--batch_size", default=None, type=int, required=False)
-    
     
     parser.add_argument("--add_noise", default=None, type=str2bool, required=False)
     parser.add_argument("--n_noisy_samples", default=None, type=int, required=False)
@@ -319,7 +318,7 @@ def main():
     parser.add_argument("--add_sys", default=None, type=str2bool, required=False)
     parser.add_argument("--sigma_sys", default=None, type=float, required=False)
     
-    parser.add_argument("--save_indexes", default=None, type=str2bool, required=False)
+    parser.add_argument("--save_indexes", default=False, type=str2bool, required=False)
     
     
     

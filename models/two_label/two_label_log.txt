@@ -1,0 +1,602 @@
+
+ -------- Parameters:
+bayesian True
+test_mode False
+n_test_idx 2
+seed 1312
+fine_tune False
+one_vs_all True
+c_0 ['lcdm']
+c_1 ['dgp', 'fR', 'rand', 'wcdm']
+dataset_balanced False
+include_last False
+log_path 
+restore False
+fname 1910_EG_oneVSall_ub
+model_name custom
+my_path /content
+DIR Train_data_full
+TEST_DIR data/test_data/new_test_data
+models_dir /content/drive/My Drive/ML_REACT/models/MM/bayes_2/
+save_ckpt True
+out_path_overwrite False
+im_depth 500
+im_width 1
+im_channels 4
+swap_axes True
+sort_labels True
+normalization stdcosmo
+sample_pace 4
+k_max 2.5
+i_max None
+add_noise True
+n_noisy_samples 10
+add_shot True
+add_sys True
+sigma_sys 5.0
+z_bins [0, 1, 2, 3]
+n_dense 1
+filters [8, 16, 32]
+kernel_sizes [10, 5, 2]
+strides [2, 2, 1]
+pool_sizes [2, 2, 0]
+strides_pooling [2, 1, 0]
+add_FT_dense False
+trainable False
+unfreeze False
+lr 0.01
+drop 0.5
+n_epochs 70
+val_size 0.15
+test_size 0.0
+batch_size 2500
+patience 150
+GPU True
+decay 0.95
+BatchNorm True
+group_lab_dict {'dgp': 'non_lcdm', 'fR': 'non_lcdm', 'rand': 'non_lcdm', 'wcdm': 'non_lcdm', 'lcdm': 'lcdm'}
+
+------------ CREATING DATA GENERATORS ------------
+labels : ['lcdm', 'non_lcdm']
+Labels encoding: 
+{'lcdm': 0, 'non_lcdm': 1}
+n_labels : 2
+rand - 18475 training examples
+wcdm - 18475 training examples
+dgp - 18475 training examples
+fR - 18475 training examples
+lcdm - 18475 training examples
+
+N. of data files: 18475
+get_all_indexes labels dict: {'lcdm': 0, 'non_lcdm': 1}
+create_generators n_labels: 2
+create_generators n_labels_eff: 5
+create_generators len_c1: 1
+Check for no duplicates in test: (0=ok):
+0.0
+Check for no duplicates in val: (0=ok):
+0
+N of files in training set: 15704
+N of files in validation set: 2771
+N of files in test set: 0
+Check - total: 18475
+--create_generators, train indexes
+batch_size: 2500
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+Train index length: 15700
+--create_generators, validation indexes
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+- Cut sample
+bs: 2500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+Val index length: 2750
+len(train_index_1), batch_size, n_labels_eff, n_noisy_samples = 15700, 2500, 5, 10
+
+--DataGenerator Train
+Data Generator Initialization
+Using z bins [0, 1, 2, 3]
+Specified k_max is 2.5
+Corresponding i_max is 100
+Closest k to k_max is 2.539859
+New data dim: (100, 1)
+Final i_max used is 100
+one_vs_all: True
+dataset_balanced: False
+N. classes: 5
+N. n_classes in output: 2
+list_IDs length: 15700
+n_indexes (n of file IDs read for each batch): 50
+batch size: 2500
+n_batches : 314
+For each batch we read 50 file IDs
+For each file ID we have 5 labels
+For each ID, label we have 10 realizations of noise
+In total, for each batch we have 2500 training examples
+Input batch size: 2500
+N of batches to cover all file IDs: 314
+
+--DataGenerator Validation
+Data Generator Initialization
+Using z bins [0, 1, 2, 3]
+Specified k_max is 2.5
+Corresponding i_max is 100
+Closest k to k_max is 2.539859
+New data dim: (100, 1)
+Final i_max used is 100
+one_vs_all: True
+dataset_balanced: False
+N. classes: 5
+N. n_classes in output: 2
+list_IDs length: 2750
+n_indexes (n of file IDs read for each batch): 50
+batch size: 2500
+n_batches : 55
+For each batch we read 50 file IDs
+For each file ID we have 5 labels
+For each ID, label we have 10 realizations of noise
+In total, for each batch we have 2500 training examples
+Input batch size: 2500
+N of batches to cover all file IDs: 55
+------------ DONE ------------
+
+------------ BUILDING MODEL ------------
+Input shape (100, 4)
+using 1D layers and 4 channels
+Expected output dimension of layer conv1d_flipout: 46.0
+Expected output dimension of layer max_pooling1d: 23.0
+Expected output dimension of layer conv1d_flipout_1: 10.0
+Expected output dimension of layer max_pooling1d_1: 9.0
+Expected output dimension of layer conv1d_flipout_2: 8.0
+Model: "functional_1"
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+input_1 (InputLayer)         [(None, 100, 4)]          0         
+_________________________________________________________________
+conv1d_flipout (Conv1DFlipou (None, 46, 8)             648       
+_________________________________________________________________
+max_pooling1d (MaxPooling1D) (None, 23, 8)             0         
+_________________________________________________________________
+batch_normalization (BatchNo (None, 23, 8)             32        
+_________________________________________________________________
+conv1d_flipout_1 (Conv1DFlip (None, 10, 16)            1296      
+_________________________________________________________________
+max_pooling1d_1 (MaxPooling1 (None, 9, 16)             0         
+_________________________________________________________________
+batch_normalization_1 (Batch (None, 9, 16)             64        
+_________________________________________________________________
+conv1d_flipout_2 (Conv1DFlip (None, 8, 32)             2080      
+_________________________________________________________________
+batch_normalization_2 (Batch (None, 8, 32)             128       
+_________________________________________________________________
+global_average_pooling1d (Gl (None, 32)                0         
+_________________________________________________________________
+dense_flipout (DenseFlipout) (None, 32)                2080      
+_________________________________________________________________
+batch_normalization_3 (Batch (None, 32)                128       
+_________________________________________________________________
+dense_flipout_1 (DenseFlipou (None, 2)                 130       
+=================================================================
+Total params: 6,586
+Trainable params: 6,410
+Non-trainable params: 176
+_________________________________________________________________
+None
+Found GPU at: /device:GPU:0
+------------ TRAINING ------------
+
+Features shape: (2500, 100, 4)
+Labels shape: (2500, 2)
+Initializing checkpoint from scratch.
+Epoch 0
+Validation loss decreased. Saved checkpoint for step 1: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-1
+Time:  408.85s, ---- Loss: 0.1852, Acc.: 0.8873, Val. Loss: 0.4560, Val. Acc.: 0.7836
+
+Epoch 1
+Validation loss decreased. Saved checkpoint for step 2: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-2
+Time:  411.32s, ---- Loss: 0.1704, Acc.: 0.9250, Val. Loss: 0.2369, Val. Acc.: 0.9178
+
+Epoch 2
+Validation loss decreased. Saved checkpoint for step 3: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-3
+Time:  402.43s, ---- Loss: 0.1856, Acc.: 0.9309, Val. Loss: 0.2213, Val. Acc.: 0.9288
+
+Epoch 3
+Validation loss decreased. Saved checkpoint for step 4: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-4
+Time:  402.49s, ---- Loss: 0.1781, Acc.: 0.9344, Val. Loss: 0.2073, Val. Acc.: 0.9365
+
+Epoch 4
+Validation loss decreased. Saved checkpoint for step 5: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-5
+Time:  405.51s, ---- Loss: 0.1735, Acc.: 0.9367, Val. Loss: 0.2066, Val. Acc.: 0.9358
+
+Epoch 5
+Loss did not decrease. Count = 1
+Time:  410.18s, ---- Loss: 0.1751, Acc.: 0.9378, Val. Loss: 0.2089, Val. Acc.: 0.9346
+
+Epoch 6
+Loss did not decrease. Count = 2
+Time:  407.01s, ---- Loss: 0.1742, Acc.: 0.9397, Val. Loss: 0.2112, Val. Acc.: 0.9315
+
+Epoch 7
+Validation loss decreased. Saved checkpoint for step 8: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-6
+Time:  407.67s, ---- Loss: 0.1721, Acc.: 0.9399, Val. Loss: 0.2006, Val. Acc.: 0.9366
+
+Epoch 8
+Loss did not decrease. Count = 1
+Time:  403.26s, ---- Loss: 0.1623, Acc.: 0.9413, Val. Loss: 0.2022, Val. Acc.: 0.9355
+
+Epoch 9
+Validation loss decreased. Saved checkpoint for step 10: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-7
+Time:  404.13s, ---- Loss: 0.1753, Acc.: 0.9418, Val. Loss: 0.1912, Val. Acc.: 0.9423
+
+Epoch 10
+Validation loss decreased. Saved checkpoint for step 11: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-8
+Time:  406.00s, ---- Loss: 0.1796, Acc.: 0.9421, Val. Loss: 0.1859, Val. Acc.: 0.9446
+
+Epoch 11
+Validation loss decreased. Saved checkpoint for step 12: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-9
+Time:  401.95s, ---- Loss: 0.1826, Acc.: 0.9429, Val. Loss: 0.1855, Val. Acc.: 0.9447
+
+Epoch 12
+Validation loss decreased. Saved checkpoint for step 13: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-10
+Time:  389.14s, ---- Loss: 0.1801, Acc.: 0.9436, Val. Loss: 0.1832, Val. Acc.: 0.9453
+
+Epoch 13
+Validation loss decreased. Saved checkpoint for step 14: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-11
+Time:  388.46s, ---- Loss: 0.1667, Acc.: 0.9440, Val. Loss: 0.1818, Val. Acc.: 0.9458
+
+Epoch 14
+Validation loss decreased. Saved checkpoint for step 15: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-12
+Time:  397.34s, ---- Loss: 0.1672, Acc.: 0.9447, Val. Loss: 0.1805, Val. Acc.: 0.9463
+
+Epoch 15
+Validation loss decreased. Saved checkpoint for step 16: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-13
+Time:  396.04s, ---- Loss: 0.1697, Acc.: 0.9449, Val. Loss: 0.1790, Val. Acc.: 0.9472
+
+Epoch 16
+Loss did not decrease. Count = 1
+Time:  393.10s, ---- Loss: 0.1810, Acc.: 0.9455, Val. Loss: 0.1801, Val. Acc.: 0.9460
+
+Epoch 17
+Validation loss decreased. Saved checkpoint for step 18: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-14
+Time:  390.97s, ---- Loss: 0.1685, Acc.: 0.9463, Val. Loss: 0.1780, Val. Acc.: 0.9469
+
+Epoch 18
+Validation loss decreased. Saved checkpoint for step 19: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-15
+Time:  391.78s, ---- Loss: 0.1652, Acc.: 0.9467, Val. Loss: 0.1775, Val. Acc.: 0.9479
+
+Epoch 19
+Validation loss decreased. Saved checkpoint for step 20: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-16
+Time:  396.27s, ---- Loss: 0.1669, Acc.: 0.9471, Val. Loss: 0.1760, Val. Acc.: 0.9475
+
+Epoch 20
+Loss did not decrease. Count = 1
+Time:  396.32s, ---- Loss: 0.1850, Acc.: 0.9473, Val. Loss: 0.1763, Val. Acc.: 0.9475
+
+Epoch 21
+Validation loss decreased. Saved checkpoint for step 22: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-17
+Time:  394.14s, ---- Loss: 0.1668, Acc.: 0.9479, Val. Loss: 0.1746, Val. Acc.: 0.9486
+
+Epoch 22
+Loss did not decrease. Count = 1
+Time:  396.14s, ---- Loss: 0.1816, Acc.: 0.9478, Val. Loss: 0.1776, Val. Acc.: 0.9464
+
+Epoch 23
+Loss did not decrease. Count = 2
+Time:  394.18s, ---- Loss: 0.1833, Acc.: 0.9479, Val. Loss: 0.1764, Val. Acc.: 0.9477
+
+Epoch 24
+Loss did not decrease. Count = 3
+Time:  394.12s, ---- Loss: 0.1758, Acc.: 0.9484, Val. Loss: 0.1754, Val. Acc.: 0.9476
+
+Epoch 25
+Validation loss decreased. Saved checkpoint for step 26: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-18
+Time:  392.52s, ---- Loss: 0.1784, Acc.: 0.9483, Val. Loss: 0.1736, Val. Acc.: 0.9493
+
+Epoch 26
+Loss did not decrease. Count = 1
+Time:  393.83s, ---- Loss: 0.1700, Acc.: 0.9490, Val. Loss: 0.1758, Val. Acc.: 0.9474
+
+Epoch 27
+Validation loss decreased. Saved checkpoint for step 28: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-19
+Time:  390.14s, ---- Loss: 0.1853, Acc.: 0.9490, Val. Loss: 0.1727, Val. Acc.: 0.9491
+
+Epoch 28
+Loss did not decrease. Count = 1
+Time:  385.84s, ---- Loss: 0.1664, Acc.: 0.9489, Val. Loss: 0.1734, Val. Acc.: 0.9486
+
+Epoch 29
+Loss did not decrease. Count = 2
+Time:  367.85s, ---- Loss: 0.1708, Acc.: 0.9493, Val. Loss: 0.1752, Val. Acc.: 0.9475
+
+Epoch 30
+Validation loss decreased. Saved checkpoint for step 31: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-20
+Time:  375.75s, ---- Loss: 0.1657, Acc.: 0.9496, Val. Loss: 0.1716, Val. Acc.: 0.9500
+
+Epoch 31
+Validation loss decreased. Saved checkpoint for step 32: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-21
+Time:  377.87s, ---- Loss: 0.1707, Acc.: 0.9495, Val. Loss: 0.1704, Val. Acc.: 0.9503
+
+Epoch 32
+Loss did not decrease. Count = 1
+Time:  378.69s, ---- Loss: 0.1694, Acc.: 0.9499, Val. Loss: 0.1706, Val. Acc.: 0.9500
+
+Epoch 33
+Validation loss decreased. Saved checkpoint for step 34: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-22
+Time:  378.51s, ---- Loss: 0.1642, Acc.: 0.9500, Val. Loss: 0.1700, Val. Acc.: 0.9503
+
+Epoch 34
+Loss did not decrease. Count = 1
+Time:  394.22s, ---- Loss: 0.1780, Acc.: 0.9503, Val. Loss: 0.1711, Val. Acc.: 0.9501
+
+Epoch 35
+Loss did not decrease. Count = 2
+Time:  390.99s, ---- Loss: 0.1690, Acc.: 0.9506, Val. Loss: 0.1719, Val. Acc.: 0.9495
+
+Epoch 36
+Validation loss decreased. Saved checkpoint for step 37: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-23
+Time:  393.30s, ---- Loss: 0.1647, Acc.: 0.9503, Val. Loss: 0.1693, Val. Acc.: 0.9511
+
+Epoch 37
+Loss did not decrease. Count = 1
+Time:  392.49s, ---- Loss: 0.1651, Acc.: 0.9507, Val. Loss: 0.1720, Val. Acc.: 0.9494
+
+Epoch 38
+Validation loss decreased. Saved checkpoint for step 39: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-24
+Time:  383.15s, ---- Loss: 0.1798, Acc.: 0.9504, Val. Loss: 0.1680, Val. Acc.: 0.9513
+
+Epoch 39
+Loss did not decrease. Count = 1
+Time:  382.05s, ---- Loss: 0.1693, Acc.: 0.9509, Val. Loss: 0.1718, Val. Acc.: 0.9502
+
+Epoch 40
+Loss did not decrease. Count = 2
+Time:  374.66s, ---- Loss: 0.1780, Acc.: 0.9508, Val. Loss: 0.1683, Val. Acc.: 0.9516
+
+Epoch 41
+Loss did not decrease. Count = 3
+Time:  374.21s, ---- Loss: 0.1648, Acc.: 0.9512, Val. Loss: 0.1692, Val. Acc.: 0.9512
+
+Epoch 42
+Loss did not decrease. Count = 4
+Time:  380.17s, ---- Loss: 0.1630, Acc.: 0.9514, Val. Loss: 0.1684, Val. Acc.: 0.9517
+
+Epoch 43
+Loss did not decrease. Count = 5
+Time:  387.15s, ---- Loss: 0.1790, Acc.: 0.9513, Val. Loss: 0.1691, Val. Acc.: 0.9513
+
+Epoch 44
+Loss did not decrease. Count = 6
+Time:  388.14s, ---- Loss: 0.1707, Acc.: 0.9514, Val. Loss: 0.1686, Val. Acc.: 0.9514
+
+Epoch 45
+Loss did not decrease. Count = 7
+Time:  384.86s, ---- Loss: 0.1740, Acc.: 0.9513, Val. Loss: 0.1692, Val. Acc.: 0.9513
+
+Epoch 46
+Validation loss decreased. Saved checkpoint for step 47: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-25
+Time:  379.00s, ---- Loss: 0.1725, Acc.: 0.9516, Val. Loss: 0.1674, Val. Acc.: 0.9520
+
+Epoch 47
+Validation loss decreased. Saved checkpoint for step 48: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-26
+Time:  374.20s, ---- Loss: 0.1657, Acc.: 0.9517, Val. Loss: 0.1670, Val. Acc.: 0.9522
+
+Epoch 48
+Loss did not decrease. Count = 1
+Time:  380.31s, ---- Loss: 0.1623, Acc.: 0.9518, Val. Loss: 0.1682, Val. Acc.: 0.9512
+
+Epoch 49
+Validation loss decreased. Saved checkpoint for step 50: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-27
+Time:  385.33s, ---- Loss: 0.1732, Acc.: 0.9516, Val. Loss: 0.1669, Val. Acc.: 0.9522
+
+Epoch 50
+Loss did not decrease. Count = 1
+Time:  387.17s, ---- Loss: 0.1714, Acc.: 0.9520, Val. Loss: 0.1676, Val. Acc.: 0.9521
+
+Epoch 51
+Loss did not decrease. Count = 2
+Time:  386.32s, ---- Loss: 0.1702, Acc.: 0.9522, Val. Loss: 0.1683, Val. Acc.: 0.9518
+
+Epoch 52
+Loss did not decrease. Count = 3
+Time:  398.50s, ---- Loss: 0.1597, Acc.: 0.9520, Val. Loss: 0.1669, Val. Acc.: 0.9523
+
+Epoch 53
+Validation loss decreased. Saved checkpoint for step 54: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-28
+Time:  400.79s, ---- Loss: 0.1717, Acc.: 0.9518, Val. Loss: 0.1668, Val. Acc.: 0.9523
+
+Epoch 54
+Loss did not decrease. Count = 1
+Time:  405.61s, ---- Loss: 0.1749, Acc.: 0.9521, Val. Loss: 0.1679, Val. Acc.: 0.9521
+
+Epoch 55
+Loss did not decrease. Count = 2
+Time:  405.34s, ---- Loss: 0.1711, Acc.: 0.9522, Val. Loss: 0.1670, Val. Acc.: 0.9526
+
+Epoch 56
+Loss did not decrease. Count = 3
+Time:  409.60s, ---- Loss: 0.1808, Acc.: 0.9522, Val. Loss: 0.1669, Val. Acc.: 0.9520
+
+Epoch 57
+Validation loss decreased. Saved checkpoint for step 58: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-29
+Time:  411.14s, ---- Loss: 0.1798, Acc.: 0.9521, Val. Loss: 0.1662, Val. Acc.: 0.9530
+
+Epoch 58
+Loss did not decrease. Count = 1
+Time:  400.33s, ---- Loss: 0.1682, Acc.: 0.9521, Val. Loss: 0.1671, Val. Acc.: 0.9520
+
+Epoch 59
+Loss did not decrease. Count = 2
+Time:  371.00s, ---- Loss: 0.1665, Acc.: 0.9522, Val. Loss: 0.1679, Val. Acc.: 0.9519
+
+Epoch 60
+Loss did not decrease. Count = 3
+Time:  362.34s, ---- Loss: 0.1726, Acc.: 0.9528, Val. Loss: 0.1669, Val. Acc.: 0.9529
+
+Epoch 61
+Loss did not decrease. Count = 4
+Time:  355.61s, ---- Loss: 0.1715, Acc.: 0.9525, Val. Loss: 0.1667, Val. Acc.: 0.9532
+
+Epoch 62
+Validation loss decreased. Saved checkpoint for step 63: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-30
+Time:  353.89s, ---- Loss: 0.1824, Acc.: 0.9524, Val. Loss: 0.1659, Val. Acc.: 0.9527
+
+Epoch 63
+Validation loss decreased. Saved checkpoint for step 64: /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/tf_ckpts/ckpt-31
+Time:  358.06s, ---- Loss: 0.1605, Acc.: 0.9524, Val. Loss: 0.1657, Val. Acc.: 0.9534
+
+Epoch 64
+Loss did not decrease. Count = 1
+Time:  357.00s, ---- Loss: 0.1668, Acc.: 0.9528, Val. Loss: 0.1667, Val. Acc.: 0.9528
+
+Epoch 65
+Loss did not decrease. Count = 2
+Time:  353.65s, ---- Loss: 0.1719, Acc.: 0.9527, Val. Loss: 0.1670, Val. Acc.: 0.9528
+
+Epoch 66
+Loss did not decrease. Count = 3
+Time:  355.05s, ---- Loss: 0.1738, Acc.: 0.9527, Val. Loss: 0.1660, Val. Acc.: 0.9532
+
+Epoch 67
+Loss did not decrease. Count = 4
+Time:  357.11s, ---- Loss: 0.1710, Acc.: 0.9528, Val. Loss: 0.1661, Val. Acc.: 0.9530
+
+Epoch 68
+Loss did not decrease. Count = 5
+Time:  357.60s, ---- Loss: 0.1807, Acc.: 0.9529, Val. Loss: 0.1660, Val. Acc.: 0.9531
+
+Epoch 69
+Loss did not decrease. Count = 6
+Time:  357.11s, ---- Loss: 0.1808, Acc.: 0.9528, Val. Loss: 0.1658, Val. Acc.: 0.9531
+
+Saving at /content/drive/My Drive/ML_REACT/models/MM/bayes_2/1910_EG_oneVSall_ub/hist.png
+Done in 27122.44s

@@ -1,0 +1,228 @@
+
+ -------- Parameters:
+bayesian True
+test_mode True
+n_test_idx 2
+seed 1312
+fine_tune False
+one_vs_all False
+c_0 ['lcdm']
+c_1 ['dgp', 'fR', 'rand', 'wcdm']
+dataset_balanced False
+include_last False
+log_path 
+restore False
+fname prova1
+model_name custom
+my_path 
+DIR data/train_data/
+TEST_DIR data/test_data/
+models_dir models/
+save_ckpt True
+out_path_overwrite False
+im_depth 500
+im_width 1
+im_channels 4
+swap_axes True
+sort_labels True
+normalization stdcosmo
+sample_pace 4
+k_max 2.5
+i_max None
+add_noise True
+n_noisy_samples 10
+add_shot True
+add_sys True
+sigma_sys 5.0
+z_bins [0, 1, 2, 3]
+n_dense 1
+filters [8, 16, 32]
+kernel_sizes [10, 5, 2]
+strides [2, 2, 1]
+pool_sizes [2, 2, 0]
+strides_pooling [2, 1, 0]
+add_FT_dense False
+trainable False
+unfreeze False
+lr 0.01
+drop 0.5
+n_epochs 10
+val_size 0.15
+test_size 0.0
+batch_size 2500
+patience 100
+GPU True
+decay 0.95
+BatchNorm True
+
+------------ CREATING DATA GENERATORS ------------
+labels : ['dgp', 'fR', 'lcdm', 'rand', 'wcdm']
+Labels encoding: 
+{'dgp': 0, 'fR': 1, 'lcdm': 2, 'rand': 3, 'wcdm': 4}
+n_labels : 5
+dgp - 500 training examples
+fR - 500 training examples
+lcdm - 500 training examples
+rand - 500 training examples
+wcdm - 500 training examples
+
+N. of data files: 500
+Choice with seed 1312 
+get_all_indexes labels dict: {'dgp': 0, 'fR': 1, 'lcdm': 2, 'rand': 3, 'wcdm': 4}
+create_generators n_labels: 5
+create_generators n_labels_eff: 5
+create_generators len_c1: 1
+Check for no duplicates in test: (0=ok):
+0.0
+Check for no duplicates in val: (0=ok):
+0
+N of files in training set: 1
+N of files in validation set: 1
+N of files in test set: 0
+Check - total: 2
+--create_generators, train indexes
+batch_size: 50
+Train index: [234]
+--create_generators, validation indexes
+Validation index: [279]
+len(train_index_1), batch_size, n_labels_eff, n_noisy_samples = 1, 50, 5, 10
+
+--DataGenerator Train
+Data Generator Initialization
+Using z bins [0, 1, 2, 3]
+Specified k_max is 2.5
+Corresponding i_max is 100
+Closest k to k_max is 2.539859
+New data dim: (100, 1)
+Final i_max used is 100
+Ids dict to use in data gen: {'dgp': array([234]), 'fR': array([235]), 'lcdm': array([236]), 'rand': array([237]), 'wcdm': array([238])}
+one_vs_all: False
+dataset_balanced: False
+N. classes: 5
+N. n_classes in output: 5
+list_IDs length: 1
+n_indexes (n of file IDs read for each batch): 1
+batch size: 50
+n_batches : 1
+For each batch we read 1 file IDs
+For each file ID we have 5 labels
+For each ID, label we have 10 realizations of noise
+In total, for each batch we have 50 training examples
+Input batch size: 50
+N of batches to cover all file IDs: 1
+
+--DataGenerator Validation
+Data Generator Initialization
+Using z bins [0, 1, 2, 3]
+Specified k_max is 2.5
+Corresponding i_max is 100
+Closest k to k_max is 2.539859
+New data dim: (100, 1)
+Final i_max used is 100
+Ids dict to use in data gen: {'dgp': array([279]), 'fR': array([280]), 'lcdm': array([281]), 'rand': array([282]), 'wcdm': array([283])}
+one_vs_all: False
+dataset_balanced: False
+N. classes: 5
+N. n_classes in output: 5
+list_IDs length: 1
+n_indexes (n of file IDs read for each batch): 1
+batch size: 50
+n_batches : 1
+For each batch we read 1 file IDs
+For each file ID we have 5 labels
+For each ID, label we have 10 realizations of noise
+In total, for each batch we have 50 training examples
+Input batch size: 50
+N of batches to cover all file IDs: 1
+------------ DONE ------------
+
+------------ BUILDING MODEL ------------
+Input shape (100, 4)
+using 1D layers and 4 channels
+Expected output dimension of layer conv1d_flipout: 46.0
+Expected output dimension of layer max_pooling1d: 23.0
+Expected output dimension of layer conv1d_flipout_1: 10.0
+Expected output dimension of layer max_pooling1d_1: 9.0
+Expected output dimension of layer conv1d_flipout_2: 8.0
+Model: "functional_1"
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+input_1 (InputLayer)         [(None, 100, 4)]          0         
+_________________________________________________________________
+conv1d_flipout (Conv1DFlipou (None, 46, 8)             648       
+_________________________________________________________________
+max_pooling1d (MaxPooling1D) (None, 23, 8)             0         
+_________________________________________________________________
+batch_normalization (BatchNo (None, 23, 8)             32        
+_________________________________________________________________
+conv1d_flipout_1 (Conv1DFlip (None, 10, 16)            1296      
+_________________________________________________________________
+max_pooling1d_1 (MaxPooling1 (None, 9, 16)             0         
+_________________________________________________________________
+batch_normalization_1 (Batch (None, 9, 16)             64        
+_________________________________________________________________
+conv1d_flipout_2 (Conv1DFlip (None, 8, 32)             2080      
+_________________________________________________________________
+batch_normalization_2 (Batch (None, 8, 32)             128       
+_________________________________________________________________
+global_average_pooling1d (Gl (None, 32)                0         
+_________________________________________________________________
+dense_flipout (DenseFlipout) (None, 32)                2080      
+_________________________________________________________________
+batch_normalization_3 (Batch (None, 32)                128       
+_________________________________________________________________
+dense_flipout_1 (DenseFlipou (None, 5)                 325       
+=================================================================
+Total params: 6,781
+Trainable params: 6,605
+Non-trainable params: 176
+_________________________________________________________________
+None
+Found GPU at: /device:GPU:0
+------------ TRAINING ------------
+
+Features shape: (50, 100, 4)
+Labels shape: (50, 5)
+Initializing checkpoint from scratch.
+Epoch 0
+Validation loss decreased. Saved checkpoint for step 1: models/prova1_test/tf_ckpts/ckpt-1
+Time:  5.41s, ---- Loss: 161.8827, Acc.: 0.3000, Val. Loss: 161.2271, Val. Acc.: 0.2000
+
+Epoch 1
+Validation loss decreased. Saved checkpoint for step 2: models/prova1_test/tf_ckpts/ckpt-2
+Time:  0.46s, ---- Loss: 160.9017, Acc.: 0.3800, Val. Loss: 160.6472, Val. Acc.: 0.2000
+
+Epoch 2
+Validation loss decreased. Saved checkpoint for step 3: models/prova1_test/tf_ckpts/ckpt-3
+Time:  0.20s, ---- Loss: 159.9988, Acc.: 0.6600, Val. Loss: 160.0899, Val. Acc.: 0.2000
+
+Epoch 3
+Validation loss decreased. Saved checkpoint for step 4: models/prova1_test/tf_ckpts/ckpt-4
+Time:  0.34s, ---- Loss: 159.3346, Acc.: 0.7200, Val. Loss: 159.5811, Val. Acc.: 0.2000
+
+Epoch 4
+Validation loss decreased. Saved checkpoint for step 5: models/prova1_test/tf_ckpts/ckpt-5
+Time:  0.19s, ---- Loss: 158.6063, Acc.: 0.8400, Val. Loss: 159.0795, Val. Acc.: 0.2000
+
+Epoch 5
+Validation loss decreased. Saved checkpoint for step 6: models/prova1_test/tf_ckpts/ckpt-6
+Time:  0.35s, ---- Loss: 158.0732, Acc.: 0.9000, Val. Loss: 158.5982, Val. Acc.: 0.2000
+
+Epoch 6
+Validation loss decreased. Saved checkpoint for step 7: models/prova1_test/tf_ckpts/ckpt-7
+Time:  0.20s, ---- Loss: 157.5795, Acc.: 0.8600, Val. Loss: 158.1633, Val. Acc.: 0.2000
+
+Epoch 7
+Validation loss decreased. Saved checkpoint for step 8: models/prova1_test/tf_ckpts/ckpt-8
+Time:  0.26s, ---- Loss: 157.0068, Acc.: 0.9600, Val. Loss: 157.7198, Val. Acc.: 0.2000
+
+Epoch 8
+Validation loss decreased. Saved checkpoint for step 9: models/prova1_test/tf_ckpts/ckpt-9
+Time:  0.34s, ---- Loss: 156.5266, Acc.: 0.9800, Val. Loss: 157.3141, Val. Acc.: 0.2000
+
+Epoch 9
+Validation loss decreased. Saved checkpoint for step 10: models/prova1_test/tf_ckpts/ckpt-10
+Time:  0.22s, ---- Loss: 156.1226, Acc.: 0.9200, Val. Loss: 156.9402, Val. Acc.: 0.2200
+
+Saving at models/prova1_test/hist.png

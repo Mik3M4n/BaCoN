@@ -471,8 +471,8 @@ def read_partition(FLAGS):
 
 def create_generators(FLAGS):
     
-    
-    os.chdir(FLAGS.my_path)
+    if FLAGS.my_path is not None:
+        os.chdir(FLAGS.my_path)
        
     
     # --------------------  CREATE DATA GENERATORS   --------------------
@@ -626,8 +626,9 @@ def create_generators(FLAGS):
 
 def create_test_generator(FLAGS):
     
-    print('Changing directory to %s' %FLAGS.my_path)
-    os.chdir(FLAGS.my_path)
+    if FLAGS.my_path is not None:
+        print('Changing directory to %s' %FLAGS.my_path)
+        os.chdir(FLAGS.my_path)
     
     all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS, Test=True)
     
