@@ -144,6 +144,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.base_case_dataset = not((self.fine_tune and self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and self.dataset_balanced))
         print('one_vs_all: %s' %str(self.one_vs_all))
         print('dataset_balanced: %s' %str(self.dataset_balanced))
+        print('base_case_dataset: %s' %str(self.base_case_dataset))
         
         
         self.n_classes_out = len(self.labels)
@@ -493,6 +494,8 @@ def create_generators(FLAGS):
         #  Unbalanced dataset , 1/5 lcdm , 1/5 rest in FT or one vs all mode
         case=3
         n_labels_eff = len(all_labels)
+        if FLAGS.one_vs_all and len(FLAGS.c_1)<len(all_labels)-1:
+            n_labels_eff = len(FLAGS.c_1)+len(FLAGS.c_0)
         len_c1=1
     print('create_generators n_labels_eff: %s' %n_labels_eff)  
     print('create_generators len_c1: %s' %len_c1)

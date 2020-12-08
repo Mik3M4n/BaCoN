@@ -313,8 +313,12 @@ def get_flags(log_path):
             else:
                 #print(line)
                 if line.split()[0]=='models_dir':
-                    key, value = line.split()[0], line.split()[1]+' '+line.split()[2]
-                            
+                    # Handle empty space in Google Drive
+                    if 'Drive' in line and 'My ' in line:
+                        key, value = line.split()[0], line.split()[1]+' '+line.split()[2]
+                    else:
+                        key, value = line.split()[0], line.split()[1]
+            
                 elif line.split()[0]=='log_path':
                     # This case corresponds to log_path
                     key, value = line.split()[0], ''
@@ -380,12 +384,13 @@ def get_all_indexes(FLAGS, Test=False):
     
 
     
-    if not (FLAGS.fine_tune or FLAGS.one_vs_all):
+    if not(FLAGS.fine_tune or FLAGS.one_vs_all):
         labels=all_labels
         if FLAGS.sort_labels:
             labels.sort()
         labels_dict = {labels[i]:int(i) for i in range(len(labels))}
     else:
+        # Fine tuning
         if len(FLAGS.c_1)>1:
             c_1_class_name='non_lcdm'
             labels=['lcdm', c_1_class_name]
@@ -427,7 +432,7 @@ def get_all_indexes(FLAGS, Test=False):
     all_index = np.array([int(str.split(name, sep='.')[0]) for name in os.listdir(dir_name) if (os.path.isfile(os.path.join(dir_name, name)) and 'DS_Store' not in name)])
     assert all_index.shape[0]==n_samples
     print('\nN. of data files: %s' %all_index.shape)
-    if FLAGS.test_mode and not Test:
+    if FLAGS.test_mode: #and not Test:
         print('Choice with seed %s ' %FLAGS.seed)
         np.random.seed(FLAGS.seed)
         if FLAGS.fine_tune and FLAGS.dataset_balanced:
@@ -438,6 +443,7 @@ def get_all_indexes(FLAGS, Test=False):
             my_size = FLAGS.n_test_idx
         all_index = np.random.choice(all_index, size=my_size, replace=False)
         val_size = 0.5
+        print('all_index shape for test mode: %s' %str(all_index.shape[0]))
     elif not Test:
         val_size = FLAGS.val_size
     else:

@@ -329,35 +329,46 @@ def main():
     #        raise ValueError('dataset_balanced must be true in one vs all mode')
         #if not FLAGS.one_vs_all and not FLAGS.dataset_balanced:
         #    raise ValueError('when not in  one vs all mode, dataset_balanced must be true')
-    
+    log_fname_add=''
     if FLAGS.fine_tune:
+        log_fname_add+='_'
         FLAGS_ORIGINAL = get_flags(FLAGS.log_path)
         if len(FLAGS.c_1)>1:
             add_ckpt_name = ''
             temp_dict={ label:'non_lcdm' for label in FLAGS.c_1}
             if not FLAGS.one_vs_all:
-                raise ValueError('one vs all must be true when fine tuning against one label')
+                #raise ValueError('one vs all must be true when fine tuning against one label')
+                print('Fine tuning reauires ne vs all to be true. Correcting original flag')
+                FLAGS.one_vs_all=True
         else:
             # fine tuning 1vs 1
             temp_dict={ label:label for label in FLAGS.c_1}
             add_ckpt_name = '_'+('-').join(FLAGS.c_1)+'vs'+('-').join(FLAGS.c_0)
+            log_fname_add+='_'+('-').join(FLAGS.c_1)+'vs'+('-').join(FLAGS.c_0)
         if not FLAGS.dataset_balanced:
             add_ckpt_name += '_unbalanced'
+            log_fname_add+='_unbalanced'
         else:
             add_ckpt_name += '_balanced'
+            log_fname_add += '_balanced'
         ft_ckpt_name_base_unfreezing=add_ckpt_name+'_frozen_weights'
         if not FLAGS.trainable:
             add_ckpt_name+='_frozen_weights'
+            log_fname_add+='_frozen_weights'
         else:
             add_ckpt_name+='_all_weights'
+            log_fname_add+='_all_weights'
         
         if FLAGS.include_last:
             add_ckpt_name+='_include_last'
+            log_fname_add+='_include_last'
         else:
             add_ckpt_name+='_without_last'
+            log_fname_add+='_without_last'
         
         if FLAGS.unfreeze:
             add_ckpt_name+='_unfrozen'
+            log_fname_add+='_unfrozen'
         #FLAGS.group_lab_dict = temp_dict
         if not FLAGS.out_path_overwrite:
             out_path = FLAGS_ORIGINAL.models_dir+FLAGS_ORIGINAL.fname
@@ -400,7 +411,7 @@ def main():
        print('Directory %s not created' %out_path)
     
     
-    logfile = os.path.join(out_path, FLAGS.fname+'_log.txt')
+    logfile = os.path.join(out_path, FLAGS.fname+log_fname_add+'_log.txt')
     myLog = Logger(logfile)
     sys.stdout = myLog
     
@@ -411,10 +422,6 @@ def main():
     for key,value in vars(FLAGS).items():
             print (key,value)
         #    fpar.write(' : '.join([str(key), str(value)])+'\n')
-    
-
-
-    
     
     
     print('\n------------ CREATING DATA GENERATORS ------------')
