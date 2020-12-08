@@ -186,10 +186,14 @@ Full list of options (more detailed doc coming soon...):
 ```
 train.py [-h] [--bayesian BAYESIAN] [--test_mode TEST_MODE]
                 [--n_test_idx N_TEST_IDX] [--seed SEED]
-                [--fine_tune FINE_TUNE] [--log_path LOG_PATH]
+                [--fine_tune FINE_TUNE] [--one_vs_all ONE_VS_ALL]
+                [--c_0 C_0 [C_0 ...]] [--c_1 C_1 [C_1 ...]]
+                [--dataset_balanced DATASET_BALANCED]
+                [--include_last INCLUDE_LAST] [--log_path LOG_PATH]
                 [--restore RESTORE] [--fname FNAME] [--model_name MODEL_NAME]
                 [--my_path MY_PATH] [--DIR DIR] [--TEST_DIR TEST_DIR]
                 [--models_dir MODELS_DIR] [--save_ckpt SAVE_CKPT]
+                [--out_path_overwrite OUT_PATH_OVERWRITE]
                 [--im_depth IM_DEPTH] [--im_width IM_WIDTH]
                 [--im_channels IM_CHANNELS] [--swap_axes SWAP_AXES]
                 [--sort_labels SORT_LABELS] [--normalization NORMALIZATION]
@@ -202,10 +206,12 @@ train.py [-h] [--bayesian BAYESIAN] [--test_mode TEST_MODE]
                 [--strides STRIDES [STRIDES ...]]
                 [--pool_sizes POOL_SIZES [POOL_SIZES ...]]
                 [--strides_pooling STRIDES_POOLING [STRIDES_POOLING ...]]
-                [--add_FT_dense ADD_FT_DENSE] [--lr LR] [--drop DROP]
+                [--add_FT_dense ADD_FT_DENSE] [--trainable TRAINABLE]
+                [--unfreeze UNFREEZE] [--lr LR] [--drop DROP]
                 [--n_epochs N_EPOCHS] [--val_size VAL_SIZE]
                 [--test_size TEST_SIZE] [--batch_size BATCH_SIZE]
                 [--patience PATIENCE] [--GPU GPU] [--decay DECAY]
+                [--BatchNorm BATCHNORM]
 ```
 
 ### Output
@@ -240,7 +246,7 @@ Additional parameters for fine tuning:
 For example, to fine-tune the five-labels network for 10 epochs, with data contained in ```data/fine_tuning_data/```:
 
 ```
-python train.py --log_path="models/five_label/five_label_log.txt" --DIR='data/fine_tuning_data/' --n_epochs=10 | tee my_model_log_FT.txt; mv my_model_log_FT.txt my_model/my_model
+python train.py --fine_tune='True' --one_vs_all='True' --log_path="models/five_label/five_label_log.txt" --fname='five_label' --DIR='data/fine_tuning_data/' --n_epochs=10  
 ```
 
 ### 3 - Testing
@@ -262,11 +268,12 @@ Full options:
 
 ```
 test.py [-h] --log_path LOG_PATH [--TEST_DIR TEST_DIR]
+               [--models_dir MODELS_DIR]
                [--n_monte_carlo_samples N_MONTE_CARLO_SAMPLES]
                [--th_prob TH_PROB] [--batch_size BATCH_SIZE]
                [--add_noise ADD_NOISE] [--n_noisy_samples N_NOISY_SAMPLES]
                [--add_shot ADD_SHOT] [--add_sys ADD_SYS]
-               [--sigma_sys SIGMA_SYS]
+               [--sigma_sys SIGMA_SYS] [--save_indexes SAVE_INDEXES]
 ```
 
 
@@ -276,6 +283,8 @@ test.py [-h] --log_path LOG_PATH [--TEST_DIR TEST_DIR]
 We provide an example of classification in the notebook ```Classification.ipynb``` in ```notebooks/```. This implements the computation of the confidence as described in Sec. 2.3 and Appendix B of the paper, and can be used to reproduce Fig. 6-8-9.
 
 One can also classify any new power spectrum and compute the confidence in the classification. This is done in a straightforward way: it is sufficient to save the data in the correct format (see *Data*) and to follow the steps outlined in the notebook. 
+
+The notebook can be run directly in Google Colab.
 
 
 ## Adding cosmologies
