@@ -6,7 +6,7 @@ The code now supports the following theories:  **LCDM, wCDM, f(R), DGP, and a ra
 
 If you have a code that generates power spectra of modified gravity theories up to k>=2.5 h Mpc^_1, get in touch ;)
 
-The methods and results can be found in the paper [Seeking New Physics in Cosmology with Bayesian Neural Networks I: Dark Energy and Modified Gravity](). 
+The methods and results can be found in the paper [Seeking New Physics in Cosmology with Bayesian Neural Networks I: Dark Energy and Modified Gravity](https://arxiv.org/abs/2012.03992). 
 
 Please contact <Michele.Mancarella@unige.ch> for further questions.
 
@@ -33,9 +33,18 @@ Please contact <Michele.Mancarella@unige.ch> for further questions.
 * [Modifying the code](https://github.com/Mik3M4n/BaCoN#Modifying-the-code)
 
 ## Citation
-This package is released together with the paper [Seeking New Physics in Cosmology with Bayesian Neural Networks I: Dark Energy and Modified Gravity](). When making use of it, please cite the paper and the present git repository. Bibtex:
+This package is released together with the paper [Seeking New Physics in Cosmology with Bayesian Neural Networks I: Dark Energy and Modified Gravity](https://arxiv.org/abs/2012.03992). When making use of it, please cite the paper and the present git repository. Bibtex:
 
-
+```
+@misc{mancarella2020seeking,
+      title={Seeking New Physics in Cosmology with Bayesian Neural Networks I: Dark Energy and Modified Gravity}, 
+      author={Michele Mancarella and Joe Kennedy and Benjamin Bose and Lucas Lombriser},
+      year={2020},
+      eprint={2012.03992},
+      archivePrefix={arXiv},
+      primaryClass={astro-ph.CO}
+}
+```
 
 ## Overview and code organisation
 
