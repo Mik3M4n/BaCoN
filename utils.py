@@ -461,3 +461,90 @@ def find_nearest(array, value):
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return idx, array[idx]
+
+
+
+def get_default_flags():
+    
+    default_args = {'bayesian':True,
+'test_mode':False,
+'n_test_idx':2,
+'seed':1312,
+'fine_tune':False,
+'one_vs_all':False,
+'c_0': ['lcdm'],
+'c_1':['dgp', 'fR', 'rand', 'wcdm'],
+'dataset_balanced':False,
+'include_last':False,
+'log_path':'',
+'restore':False,
+'fname':'my_model',
+'model_name':'custom',
+'my_path':None,
+'DIR': 'data/train_data/',
+'TEST_DIR':'data/test_data/',
+'models_dir':'models/',
+'save_ckpt':True,
+'out_path_overwrite':False,
+'im_depth':500,
+'im_width':1,
+'im_channels':4,
+'swap_axes':True,
+'sort_labels':True,
+'normalization':'stdcosmo',
+'sample_pace':4,
+'k_max':2.5,
+'i_max':None,
+'add_noise':True,
+'n_noisy_samples':10,
+'add_shot':True,
+'add_sys':True,
+'sigma_sys':5.0,
+'z_bins':[0, 1, 2, 3],
+'n_dense':1,
+'filters':[8, 16, 32],
+'kernel_sizes':[10, 5, 2],
+'strides':[2, 2, 1],
+'pool_sizes':[2, 2, 0],
+'strides_pooling':[2, 1, 0],
+'add_FT_dense':False,
+'trainable':False,
+'unfreeze':False,
+'lr':0.01,
+'drop':0.5,
+'n_epochs':70,
+'val_size':0.15,
+'test_size':0.0,
+'batch_size':2500,
+'patience':100,
+'GPU':True,
+'decay':0.95,
+'BatchNorm':True,
+}
+
+
+    FLAGS = DummyFlags(default_args)
+
+    if FLAGS.fine_tune:
+        if len(FLAGS.c_1)>1:
+            temp_dict={ label:'non_lcdm' for label in FLAGS.c_1}
+            if not FLAGS.one_vs_all:
+                #raise ValueError('one vs all must be true when fine tuning against one label')
+                print('Fine tuning reauires ne vs all to be true. Correcting original flag')
+                FLAGS.one_vs_all=True
+        else:
+            # fine tuning 1vs 1
+            temp_dict={ label:label for label in FLAGS.c_1}
+    elif FLAGS.one_vs_all:
+        if len(FLAGS.c_1)>1:
+            temp_dict={ label:'non_lcdm' for label in FLAGS.c_1}
+        else:
+            # training  1vs 1
+            temp_dict={ label:label for label in FLAGS.c_1}
+
+    if FLAGS.one_vs_all or FLAGS.fine_tune: 
+        FLAGS.group_lab_dict = temp_dict
+        for i in range(len(FLAGS.c_0) ):
+            FLAGS.group_lab_dict[FLAGS.c_0[i]]=FLAGS.c_0[i]
+            
+    return FLAGS
